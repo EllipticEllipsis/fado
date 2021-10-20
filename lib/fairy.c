@@ -1,10 +1,12 @@
+#include "fairy.h"
+#include <endian.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <endian.h>
-#include "fairy.h"
+
+#include "fairy_data.c"
 
 // #if __BYTE_ORDER == __LITTLE_ENDIAN
 // #define MAGIC 'FLE\x7F'
@@ -13,15 +15,15 @@
 // #endif
 
 /* Endian readers. MIPS is BE, so only need these */
-static Elf32_Half Fairy_ReadHalf(const uint8_t *data) {
+static Elf32_Half Fairy_ReadHalf(const uint8_t* data) {
     return data[0] << 8 | data[1] << 0;
 }
 
-static Elf32_Word Fairy_ReadWord(const uint8_t *data) {
+static Elf32_Word Fairy_ReadWord(const uint8_t* data) {
     return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3] << 0;
 }
 
-static bool Fairy_VerifyMagic(const uint8_t *data) {
+static bool Fairy_VerifyMagic(const uint8_t* data) {
     return (data[0] == 0x7F && data[1] == 'E' && data[2] == 'L' && data[3] == 'F');
 }
 
@@ -42,64 +44,70 @@ static uint32_t Fairy_Swap32(uint32_t x) {
 #define REEND32(x) (x)
 #endif
 
-FairyFileHeader *Fairy_ReadFileHeader(FairyFileHeader *header, FILE *file) {
-    uint8_t data[0x34];
-    fread(data, 0x34, 1, file);
+const char* Fairy_StringFromDefine(const FairyDefineString* dict, int define) {
+    size_t i;
+    for (i = 0; dict[i].string != NULL; i++) {
+        if (dict[i].define == define) {
+            return dict[i].string;
+        }
+    }
+    return NULL;
+}
 
-    if (!Fairy_VerifyMagic(data)) {
+/* Reading functions */
+
+/**
+ * Every reading function:
+ * - Returns the pointer to the struct
+ * - Takes the ouput struct or array as its first argument. This must be pre-allocated
+ * - Takes the input file as the second argument (At least until I am persuaded to read the whole file into RAM...)
+ * - The rest of the arguments are important information about the struct it is reading (offset and size, usually)
+ */
+
+FairyFileHeader* Fairy_ReadFileHeader(FairyFileHeader* header, FILE* file) {
+    fseek(file, 9, SEEK_SET);
+    fread(header, 0x34, 1, file);
+
+    if (!Fairy_VerifyMagic(header)) {
         fprintf(stderr, "Not a valid ELF file\n");
         return NULL;
     }
 
-    if (data[EI_CLASS] != ELFCLASS32) {
+    if (header->e_ident[EI_CLASS] != ELFCLASS32) {
         fprintf(stderr, "Not a 32-bit ELF file\n");
         return NULL;
     }
 
-    memcpy(&header->e_ident, data, EI_NIDENT);
-    header->e_type = Fairy_ReadHalf(data + EI_NIDENT);
-    header->e_machine = Fairy_ReadHalf(data + EI_NIDENT + 0x2);
-    header->e_version = Fairy_ReadWord(data + EI_NIDENT + 0x4);
-    header->e_entry = Fairy_ReadWord(data + EI_NIDENT + 0x8);
-    header->e_phoff = Fairy_ReadWord(data + EI_NIDENT + 0xC);
-    header->e_shoff = Fairy_ReadWord(data + EI_NIDENT + 0x10);
-    header->e_flags = Fairy_ReadWord(data + EI_NIDENT + 0x14);
-    header->e_ehsize = Fairy_ReadHalf(data + EI_NIDENT + 0x18);
-    header->e_phentsize = Fairy_ReadHalf(data + EI_NIDENT + 0x1A);
-    header->e_phnum = Fairy_ReadHalf(data + EI_NIDENT + 0x1C);
-    header->e_shentsize = Fairy_ReadHalf(data + EI_NIDENT + 0x1E);
-    header->e_shnum = Fairy_ReadHalf(data + EI_NIDENT + 0x20);
-    header->e_shstrndx = Fairy_ReadHalf(data + EI_NIDENT + 0x22);
-
-    // fread(header, 0x34, 1, file);
-    // header->e_type = REEND16(header->e_type);
-    // header->e_machine = REEND16(header->e_machine);
-    // header->e_version = REEND32(header->e_version);
-    // header->e_entry = REEND32(header->e_entry);
-    // header->e_phoff = REEND32(header->e_phoff);
-    // header->e_shoff = REEND32(header->e_shoff);
-    // header->e_flags = REEND32(header->e_flags);
-    // header->e_ehsize = REEND16(header->e_ehsize);
-    // header->e_phentsize = REEND16(header->e_phentsize);
-    // header->e_phnum = REEND16(header->e_phnum);
-    // header->e_shentsize = REEND16(header->e_shentsize);
-    // header->e_shnum = REEND16(header->e_shnum);
-    // header->e_shstrndx = REEND16(header->e_shstrndx);
+    header->e_type = REEND16(header->e_type);
+    header->e_machine = REEND16(header->e_machine);
+    header->e_version = REEND32(header->e_version);
+    header->e_entry = REEND32(header->e_entry);
+    header->e_phoff = REEND32(header->e_phoff);
+    header->e_shoff = REEND32(header->e_shoff);
+    header->e_flags = REEND32(header->e_flags);
+    header->e_ehsize = REEND16(header->e_ehsize);
+    header->e_phentsize = REEND16(header->e_phentsize);
+    header->e_phnum = REEND16(header->e_phnum);
+    header->e_shentsize = REEND16(header->e_shentsize);
+    header->e_shnum = REEND16(header->e_shnum);
+    header->e_shstrndx = REEND16(header->e_shstrndx);
 
     return header;
 }
 
 /* tableOffset and number should be obtained from the file header */
-FairySecHeader *Fairy_ReadSectionTable(FairySecHeader *sectionTable, size_t tableOffset, size_t number, FILE *file) {
+FairySecHeader* Fairy_ReadSectionTable(FairySecHeader* sectionTable, FILE* file, size_t tableOffset, size_t number) {
     size_t entrySize = sizeof(FairySecHeader);
     size_t tableSize = number * entrySize;
 
     fseek(file, tableOffset, SEEK_SET);
     fread(sectionTable, tableSize, 1, file);
 
+    /* Since the section table happens to only have entries of width 4, we can byteswap it by pretending it is a raw
+     * uint32_t array */
     {
         size_t i;
-        uint32_t *data = (uint32_t *)sectionTable;
+        uint32_t* data = (uint32_t*)sectionTable;
         for (i = 0; i < tableSize / sizeof(uint32_t); i++) {
             data[i] = REEND32(data[i]);
         }
@@ -108,7 +116,7 @@ FairySecHeader *Fairy_ReadSectionTable(FairySecHeader *sectionTable, size_t tabl
     return sectionTable;
 }
 
-FairySym *Fairy_ReadSymbolTable(FairySym *symbolTable, size_t tableOffset, size_t tableSize, FILE *file) {
+FairySym* Fairy_ReadSymbolTable(FairySym* symbolTable, FILE* file, size_t tableOffset, size_t tableSize) {
     size_t number = tableSize / sizeof(FairySym);
 
     fseek(file, tableOffset, SEEK_SET);
@@ -128,90 +136,33 @@ FairySym *Fairy_ReadSymbolTable(FairySym *symbolTable, size_t tableOffset, size_
     return symbolTable;
 }
 
-typedef struct {
-    int define;
-    const char *string;
-} FairyDefineString;
-
-#define FAIRY_DEF_STRING(x) \
-    { x, #x }
-
-// #define SST_
-// #define FAIRY_SST_STRING(x) { SST_ ## x, #x }
-
-// clang-format off
-// static const FairyDefineString sstTypes[] = {
-//     FAIRY_SST_STRING(NOTYPE),
-//     FAIRY_SST_STRING(OBJECT),
-//     FAIRY_SST_STRING(FUNC),
-//     FAIRY_SST_STRING(SECTION),
-//     FAIRY_SST_STRING(FILE),
-//     FAIRY_SST_STRING(COMMON),
-//     FAIRY_SST_STRING(TLS),
-//     FAIRY_SST_STRING(NUM),
-//     FAIRY_SST_STRING(LOOS),
-//     FAIRY_SST_STRING(GNU_IFUNC),
-//     FAIRY_SST_STRING(HIOS),
-//     FAIRY_SST_STRING(LOPROC),
-//     FAIRY_SST_STRING(HIPROC),
-//     { 0 },
-// };
-static const FairyDefineString stTypes[] = {
-    FAIRY_DEF_STRING(STT_NOTYPE),
-    FAIRY_DEF_STRING(STT_OBJECT),
-    FAIRY_DEF_STRING(STT_FUNC),
-    FAIRY_DEF_STRING(STT_SECTION),
-    FAIRY_DEF_STRING(STT_FILE),
-    FAIRY_DEF_STRING(STT_COMMON),
-    FAIRY_DEF_STRING(STT_TLS),
-    FAIRY_DEF_STRING(STT_NUM),
-    FAIRY_DEF_STRING(STT_LOOS),
-    FAIRY_DEF_STRING(STT_GNU_IFUNC),
-    FAIRY_DEF_STRING(STT_HIOS),
-    FAIRY_DEF_STRING(STT_LOPROC),
-    FAIRY_DEF_STRING(STT_HIPROC),
-    { 0 },
-};
-
-static const FairyDefineString stBinds[] = {
-    FAIRY_DEF_STRING(STB_LOCAL),
-    FAIRY_DEF_STRING(STB_GLOBAL),
-    FAIRY_DEF_STRING(STB_WEAK),
-    FAIRY_DEF_STRING(STB_NUM),
-    FAIRY_DEF_STRING(STB_LOOS),
-    FAIRY_DEF_STRING(STB_GNU_UNIQUE),
-    FAIRY_DEF_STRING(STB_HIOS),
-    FAIRY_DEF_STRING(STB_LOPROC),
-    FAIRY_DEF_STRING(STB_HIPROC),
-    { 0 },
-};
-static const FairyDefineString stVisibilities[] = {
-    FAIRY_DEF_STRING(STV_DEFAULT),
-    FAIRY_DEF_STRING(STV_INTERNAL),
-    FAIRY_DEF_STRING(STV_HIDDEN),
-    FAIRY_DEF_STRING(STV_PROTECTED),
-    { 0 },
-};
-// clang-format on
-
-const char *Fairy_StringFromDefine(const FairyDefineString *dict, int define) {
-    size_t i;
-    for (i = 0; dict[i].string != NULL; i++) {
-        if (dict[i].define == define) {
-            return dict[i].string;
-        }
-    }
-    return NULL;
+/* Can be used for both the section header string table and the strtab */
+char* Fairy_ReadStringTable(char* stringTable, FILE* file, size_t tableOffset, size_t tableSize) {
+    fseek(file, tableOffset, SEEK_SET);
+    fread(stringTable, tableSize, 1, file);
+    return stringTable;
 }
 
-void Fairy_PrintSymbolTable(FILE *inputFile) {
+char* Fairy_GetSectionName(FairySecHeader* sectionTable, char* shstrtab, size_t index) {
+    return &shstrtab[sectionTable[index].sh_name];
+}
+
+/* Look up the index in the symbol table and return a pointer to the beginning of its string */
+char* Fairy_GetSymbolName(FairySym* symtab, char* strtab, size_t index) {
+    return &strtab[symtab[index].st_name];
+}
+
+
+//=============================
+
+void Fairy_PrintSymbolTable(FILE* inputFile) {
     FairyFileHeader fileHeader;
-    FairySecHeader *sectionTable;
+    FairySecHeader* sectionTable;
     size_t shstrndx;
-    char *shstrtab;
-    FairySym *symbolTable = NULL;
+    char* shstrtab;
+    FairySym* symbolTable = NULL;
     size_t symbolTableNum = 0;
-    char *strtab = NULL;
+    char* strtab = NULL;
 
     Fairy_ReadFileHeader(&fileHeader, inputFile);
     sectionTable = malloc(fileHeader.e_shentsize * fileHeader.e_shnum);
@@ -305,13 +256,13 @@ void Fairy_PrintSymbolTable(FILE *inputFile) {
 }
 
 /* offset and number are attained from the section table */
-FairyRel *Fairy_ReadRelocs(FairyRel *relocTable, size_t offset, size_t size, FILE *file) {
+FairyRel* Fairy_ReadRelocs(FairyRel* relocTable, size_t offset, size_t size, FILE* file) {
     fseek(file, offset, SEEK_SET);
     fread(relocTable, size, 1, file);
 
     {
         size_t i;
-        uint32_t *data = (uint32_t *)relocTable;
+        uint32_t* data = (uint32_t*)relocTable;
         for (i = 0; i < size / sizeof(uint32_t); i++) {
             data[i] = REEND32(data[i]);
         }
@@ -332,12 +283,12 @@ FairyRel *Fairy_ReadRelocs(FairyRel *relocTable, size_t offset, size_t size, FIL
 //     FAIRY_RELOC_TYPE(R_MIPS_NONE),
 // };
 
-void Fairy_PrintRelocs(FILE *inputFile) {
+void Fairy_PrintRelocs(FILE* inputFile) {
     FairyFileHeader fileHeader;
-    FairySecHeader *sectionTable;
-    FairyRel *relocs;
+    FairySecHeader* sectionTable;
+    FairyRel* relocs;
     size_t shstrndx;
-    char *shstrtab;
+    char* shstrtab;
     size_t currentSection;
 
     Fairy_ReadFileHeader(&fileHeader, inputFile);
@@ -414,11 +365,11 @@ void Fairy_PrintRelocs(FILE *inputFile) {
     free(shstrtab);
 }
 
-void Fairy_PrintSectionTable(FILE *inputFile) {
+void Fairy_PrintSectionTable(FILE* inputFile) {
     FairyFileHeader fileHeader;
-    FairySecHeader *sectionTable;
+    FairySecHeader* sectionTable;
     size_t shstrndx;
-    char *shstrtab;
+    char* shstrtab;
     size_t currentSection;
 
     Fairy_ReadFileHeader(&fileHeader, inputFile);
@@ -707,7 +658,7 @@ void Fairy_PrintSectionTable(FILE *inputFile) {
  * Returns true if the string 'initial' is contained in the string 'string'
  * 'initial' must be null-terminated, 'string' ideally is.
  */
-bool Fairy_StringHasInitialChars(const char *string, const char *initial) {
+bool Fairy_StringHasInitialChars(const char* string, const char* initial) {
     int i;
     printf("%s", "Fairy_StringHasInitialChars");
     printf(": \"%s\" vs \"%s\"", string, initial);
@@ -729,7 +680,7 @@ typedef enum {
     // ,REL_SECTION_BSS
 } FairyOverlayRelSection;
 
-const char *relSectionStrings[] = {
+const char* relSectionStrings[] = {
     NULL,
     ".text",
     ".data",
@@ -740,16 +691,16 @@ uint32_t Fairy_PackReloc(FairyOverlayRelSection sec, FairyRel rel) {
     return (sec << 0x1E) | (ELF32_R_TYPE(rel.r_info) << 0x18) | rel.r_offset;
 }
 
-void Fairy_PrintSectionSizes(FairySecHeader *sectionTable, size_t tableSize, char *shstrtab, FILE *inputFile) {
+void Fairy_PrintSectionSizes(FairySecHeader* sectionTable, size_t tableSize, char* shstrtab, FILE* inputFile) {
     size_t number = tableSize / sizeof(FairySecHeader);
     FairySecHeader currentHeader;
-    char *sectionName;
+    char* sectionName;
     size_t relocSectionsCount = 0;
-    size_t *relocSectionIndices;
-    int *relocSectionSection;
+    size_t* relocSectionIndices;
+    int* relocSectionSection;
     size_t currentRelocSection = 0;
     FairySecHeader symtabHeader;
-    FairySym *symtab;
+    FairySym* symtab;
     FairySecHeader strtabHeader;
     char* strtab;
     // size_t symtabSize;
@@ -865,7 +816,7 @@ void Fairy_PrintSectionSizes(FairySecHeader *sectionTable, size_t tableSize, cha
 
     /* Do single-file relocs */
     {
-        FairyRel *relocs;
+        FairyRel* relocs;
         for (currentSection = 0; currentSection < relocSectionsCount; currentSection++) {
             size_t currentReloc;
             size_t sectionRelocCount;
@@ -881,7 +832,8 @@ void Fairy_PrintSectionSizes(FairySecHeader *sectionTable, size_t tableSize, cha
                 }
 
                 printf(".word 0x%08X", Fairy_PackReloc(relocSectionSection[currentSection], relocs[currentReloc]));
-                printf(" # %X (%s), %X, 0x%06X", relocSectionSection[currentSection], &shstrtab[currentHeader.sh_name], ELF32_R_TYPE(relocs[currentReloc].r_info), relocs[currentReloc].r_offset);
+                printf(" # %X (%s), %X, 0x%06X", relocSectionSection[currentSection], &shstrtab[currentHeader.sh_name],
+                       ELF32_R_TYPE(relocs[currentReloc].r_info), relocs[currentReloc].r_offset);
                 printf(", %s", &strtab[symbol.st_name]);
                 putchar('\n');
 
@@ -905,11 +857,11 @@ void Fairy_PrintSectionSizes(FairySecHeader *sectionTable, size_t tableSize, cha
     free(strtab);
 }
 
-void PrintZeldaReloc(FILE *inputFile) {
+void PrintZeldaReloc(FILE* inputFile) {
     FairyFileHeader fileHeader;
-    FairySecHeader *sectionTable;
+    FairySecHeader* sectionTable;
     size_t shstrndx;
-    char *shstrtab;
+    char* shstrtab;
     // FairySym *symbolTable = NULL;
     // size_t symbolTableNum = 0;
     // char *strtab = NULL;
