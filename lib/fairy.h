@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <elf.h>
 
+#define FAIRY_DEF_STRING(prefix, x) \
+    { prefix##_##x, #x }
+
+
 typedef Elf32_Ehdr FairyFileHeader;
 typedef Elf32_Shdr FairySecHeader;
 typedef Elf32_Sym FairySym;
@@ -33,6 +37,7 @@ typedef enum {
     FAIRY_SECTION_OTHER //,
 } FairySection;
 
+const char* Fairy_StringFromDefine(const FairyDefineString* dict, int define);
 
 FairyFileHeader* Fairy_ReadFileHeader(FairyFileHeader* header, FILE* file);
 FairySecHeader* Fairy_ReadSectionTable(FairySecHeader* sectionTable, FILE* file, size_t tableOffset, size_t number);

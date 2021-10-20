@@ -14,6 +14,61 @@
 #include "fairy.h"
 #include "fado.h"
 
+#if defined _WIN32 || defined __CYGWIN__
+#define PATH_SEPARATOR '\\'
+#else
+#define PATH_SEPARATOR '/'
+#endif
+/* (Bad) filename-parsing idea to get the overlay name from the filename. ovlName must be freed separately. */
+// char* GetOverlayNameFromFilename(char* ovlName, const char* src) {
+//     size_t ind;
+//     size_t start = 0;
+//     size_t end = 0;
+
+//     for (ind = strlen(src); ind != 0; ind--) {
+//         if (src[ind] == PATH_SEPARATOR) {
+//             if (end != 0) {
+//                 start = ind + 1;
+//                 break;
+//             }
+//             end = ind;
+//         }
+//     }
+//     if (end == 0) {
+//         return NULL;
+//     }
+
+//     ovlName = malloc((end - start + 1) * sizeof(char));
+//     memcpy(ovlName, src + start, end - start);
+//     ovlName[end - start + 1] = '\0';
+
+//     return ovlName;
+// }
+
+char* GetOverlayNameFromFilename(const char* src) {
+    char* ret;
+    const char* ptr;
+    const char* start = src;
+    const char* end = src;
+
+    for (ptr = src; *ptr != '\0'; ptr++) {
+        if (*ptr == PATH_SEPARATOR) {
+            start = end;
+            end = ptr;
+        }
+    }
+
+    if (end == src) {
+        return NULL;
+    }
+
+    ret = malloc((end - start) * sizeof(char));
+    memcpy(ret, start + 1, end - start - 1);
+    ret[end - start] = '\0';
+
+    return ret;
+}
+
 #define OPTSTR "h"
 
 static const OptInfo optInfo[] = {
@@ -33,9 +88,9 @@ void ConstructLongOpts() {
     }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     int opt;
-    FILE *inputFile;
+    FILE* inputFile;
 
     ConstructLongOpts();
 
@@ -71,22 +126,13 @@ int main(int argc, char **argv) {
     // Fairy_PrintSymbolTable(inputFile);
     // PrintZeldaReloc(inputFile);
     Fado_Relocs(inputFile);
+    // {
+    //     char* ovlName = GetOverlayNameFromFilename(argv[optind]);
+    //     printf("%s\n", ovlName);
+    //     free(ovlName);
+    // }
 
     // Fairy_PrintRelocs(inputFile);
-
-    // typedef struct
-    // {
-    //   Elf32_Word	sh_name;		/* Section name (string tbl index) */
-    //   Elf32_Word	sh_type;		/* Section type */
-    //   Elf32_Word	sh_flags;		/* Section flags */
-    //   Elf32_Addr	sh_addr;		/* Section virtual addr at execution */
-    //   Elf32_Off	sh_offset;		/* Section file offset */
-    //   Elf32_Word	sh_size;		/* Section size in bytes */
-    //   Elf32_Word	sh_link;		/* Link to another section */
-    //   Elf32_Word	sh_info;		/* Additional section information */
-    //   Elf32_Word	sh_addralign;		/* Section alignment */
-    //   Elf32_Word	sh_entsize;		/* Entry size if section holds table */
-    // } Elf32_Shdr;
 
     fclose(inputFile);
 

@@ -41,22 +41,86 @@ FadoRelocInfo* Fado_MakeReloc(FadoRelocInfo* relocInfo, FairySection section, Fa
     return relocInfo;
 }
 
+static const FairyDefineString relSectionNames[] = {
+    FAIRY_DEF_STRING(FAIRY_SECTION, TEXT),
+    FAIRY_DEF_STRING(FAIRY_SECTION, DATA),
+    FAIRY_DEF_STRING(FAIRY_SECTION, RODATA),
+    { 0 },
+};
+
+static const FairyDefineString relTypeNames[] = {
+    FAIRY_DEF_STRING(R, MIPS_NONE),    /* No reloc */
+    FAIRY_DEF_STRING(R, MIPS_16),      /* Direct 16 bit */
+    FAIRY_DEF_STRING(R, MIPS_32),      /* Direct 32 bit */
+    FAIRY_DEF_STRING(R, MIPS_REL32),   /* PC relative 32 bit */
+    FAIRY_DEF_STRING(R, MIPS_26),      /* Direct 26 bit shifted */
+    FAIRY_DEF_STRING(R, MIPS_HI16),    /* High 16 bit */
+    FAIRY_DEF_STRING(R, MIPS_LO16),    /* Low 16 bit */
+    FAIRY_DEF_STRING(R, MIPS_GPREL16), /* GP relative 16 bit */
+    FAIRY_DEF_STRING(R, MIPS_LITERAL), /* 16 bit literal entry */
+    FAIRY_DEF_STRING(R, MIPS_GOT16),   /* 16 bit GOT entry */
+    FAIRY_DEF_STRING(R, MIPS_PC16),    /* PC relative 16 bit */
+    FAIRY_DEF_STRING(R, MIPS_CALL16),  /* 16 bit GOT entry for function */
+    FAIRY_DEF_STRING(R, MIPS_GPREL32), /* GP relative 32 bit */
+    FAIRY_DEF_STRING(R, MIPS_SHIFT5),
+    FAIRY_DEF_STRING(R, MIPS_SHIFT6),
+    FAIRY_DEF_STRING(R, MIPS_64),
+    FAIRY_DEF_STRING(R, MIPS_GOT_DISP),
+    FAIRY_DEF_STRING(R, MIPS_GOT_PAGE),
+    FAIRY_DEF_STRING(R, MIPS_GOT_OFST),
+    FAIRY_DEF_STRING(R, MIPS_GOT_HI16),
+    FAIRY_DEF_STRING(R, MIPS_GOT_LO16),
+    FAIRY_DEF_STRING(R, MIPS_SUB),
+    FAIRY_DEF_STRING(R, MIPS_INSERT_A),
+    FAIRY_DEF_STRING(R, MIPS_INSERT_B),
+    FAIRY_DEF_STRING(R, MIPS_DELETE),
+    FAIRY_DEF_STRING(R, MIPS_HIGHER),
+    FAIRY_DEF_STRING(R, MIPS_HIGHEST),
+    FAIRY_DEF_STRING(R, MIPS_CALL_HI16),
+    FAIRY_DEF_STRING(R, MIPS_CALL_LO16),
+    FAIRY_DEF_STRING(R, MIPS_SCN_DISP),
+    FAIRY_DEF_STRING(R, MIPS_REL16),
+    FAIRY_DEF_STRING(R, MIPS_ADD_IMMEDIATE),
+    FAIRY_DEF_STRING(R, MIPS_PJUMP),
+    FAIRY_DEF_STRING(R, MIPS_RELGOT),
+    FAIRY_DEF_STRING(R, MIPS_JALR),
+    FAIRY_DEF_STRING(R, MIPS_TLS_DTPMOD32),    /* Module number 32 bit */
+    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL32),    /* Module-relative offset 32 bit */
+    FAIRY_DEF_STRING(R, MIPS_TLS_DTPMOD64),    /* Module number 64 bit */
+    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL64),    /* Module-relative offset 64 bit */
+    FAIRY_DEF_STRING(R, MIPS_TLS_GD),          /* 16 bit GOT offset for GD */
+    FAIRY_DEF_STRING(R, MIPS_TLS_LDM),         /* 16 bit GOT offset for LDM */
+    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL_HI16), /* Module-relative offset, high 16 bits */
+    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL_LO16), /* Module-relative offset, low 16 bits */
+    FAIRY_DEF_STRING(R, MIPS_TLS_GOTTPREL),    /* 16 bit GOT offset for IE */
+    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL32),     /* TP-relative offset, 32 bit */
+    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL64),     /* TP-relative offset, 64 bit */
+    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL_HI16),  /* TP-relative offset, high 16 bits */
+    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL_LO16),  /* TP-relative offset, low 16 bits */
+    FAIRY_DEF_STRING(R, MIPS_GLOB_DAT),
+    FAIRY_DEF_STRING(R, MIPS_COPY),
+    FAIRY_DEF_STRING(R, MIPS_JUMP_SLOT),
+    FAIRY_DEF_STRING(R, MIPS_NUM),
+};
+
 void Fado_Relocs(FILE* inputFile) {
     FairyFileInfo fileInfo;
     FadoRelocInfo* relocList[FAIRY_SECTION_OTHER]; // Maximum number of reloc sections
     size_t relocIndex;
     FairySection section;
     FairySym* symtab;
+    size_t relocCount = 0;
+    uint8_t padCount;
 
     Fairy_InitFile(&fileInfo, inputFile);
     symtab = fileInfo.symtabInfo.sectionData;
-    printf("symtab set\n");
+    // printf("symtab set\n");
 
     for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
         FairyRel* relSection = fileInfo.relocTablesInfo[section].sectionData;
 
         if (relSection == NULL) {
-            printf("Ignoring empty reloc section\n");
+            // printf("Ignoring empty reloc section\n");
             continue;
         }
         relocList[section] =
@@ -65,10 +129,52 @@ void Fado_Relocs(FILE* inputFile) {
         for (relocIndex = 0; relocIndex < fileInfo.relocTablesInfo[section].sectionSize / sizeof(FairyRel);
              relocIndex++) {
             FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
-
             Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
-            printf(".word 0x%X # %s\n", currentReloc->relocWord, &fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name]);
+            if (symtab[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+                relocCount++;
+            }
         }
+    }
+
+    {
+        char overlayName[] = "ovl_Name_Goes_Here";
+        printf(".section .ovl\n# %sOverlayInfo\n", overlayName);
+        printf(".word _%sSegmentTextSize\n", overlayName);
+        printf(".word _%sSegmentDataSize\n", overlayName);
+        printf(".word _%sSegmentRoDataSize\n", overlayName);
+        printf(".word _%sSegmentBssSize\n", overlayName);
+
+        printf("\n.word %zd # relocCount\n", relocCount);
+        padCount = -(relocCount + 2) & 3;
+
+        for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
+            FairyRel* relSection = fileInfo.relocTablesInfo[section].sectionData;
+
+            if (relSection == NULL) {
+                // printf("Ignoring empty reloc section\n");
+                continue;
+            }
+
+            printf("\n# %s RELOCS\n", Fairy_StringFromDefine(relSectionNames, section));
+
+            for (relocIndex = 0; relocIndex < fileInfo.relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+                 relocIndex++) {
+                FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
+
+                if (symtab[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+                    printf(".word 0x%X # %-6s %-10s 0x%06X %s\n", currentReloc->relocWord,
+                           relSectionNames[section].string,
+                           Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
+                           currentReloc->relocWord & 0xFFFFFF,
+                           &fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name]);
+                }
+            }
+        }
+        /* print pads and section size */
+        for (relocCount += 5; ((relocCount + 1) & 3) != 0; relocCount++) {
+            printf(".word 0\n");
+        }
+        printf("\n.word 0x%08zX # %sOverlayInfoOffset\n", 4 * (relocCount + 1), overlayName);
     }
 
     Fairy_DestroyFile(&fileInfo);

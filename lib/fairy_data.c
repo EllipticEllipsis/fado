@@ -1,9 +1,6 @@
 #include "fairy.h"
 #include <elf.h>
 
-#define FAIRY_DEF_STRING(prefix, x) \
-    { prefix##_##x, #x }
-
 // clang-format off
 static const FairyDefineString stTypes[] = {
     FAIRY_DEF_STRING(STT, NOTYPE),
@@ -34,6 +31,7 @@ static const FairyDefineString stBinds[] = {
     FAIRY_DEF_STRING(STB, HIPROC),
     { 0 },
 };
+
 static const FairyDefineString stVisibilities[] = {
     FAIRY_DEF_STRING(STV, DEFAULT),
     FAIRY_DEF_STRING(STV, INTERNAL),
@@ -41,4 +39,5 @@ static const FairyDefineString stVisibilities[] = {
     FAIRY_DEF_STRING(STV, PROTECTED),
     { 0 },
 };
+
 // clang-format on

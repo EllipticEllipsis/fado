@@ -231,7 +231,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                 case SHT_STRTAB:
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "strtab") == 0) {
-                        printf("strtab found\n");
+                        // printf("strtab found\n");
                         fileInfo->strtab = malloc(currentSection.sh_size);
                         Fairy_ReadStringTable(fileInfo->strtab, file, currentSection.sh_offset, currentSection.sh_size);
                     }
@@ -245,13 +245,13 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                         if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
                             relocSection = FAIRY_SECTION_TEXT;
-                            printf("Found rel.text section\n");
+                            // printf("Found rel.text section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "data") == 0) {
                             relocSection = FAIRY_SECTION_DATA;
-                            printf("Found rel.data section\n");
+                            // printf("Found rel.data section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "rodata") == 0) {
                             relocSection = FAIRY_SECTION_RODATA;
-                            printf("Found rel.rodata section\n");
+                            // printf("Found rel.rodata section\n");
                         } else {
                             break;
                         }
@@ -267,22 +267,22 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
             }
         }
     }
-    printf("Init done.\n");
+    // printf("Init done.\n");
 }
 
 void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
     size_t i;
     for (i = 0; i < 3; i++) {
         if (fileInfo->relocTablesInfo[i].sectionData != NULL) {
-            printf("Freeing reloc section %zd data\n", i);
+            // printf("Freeing reloc section %zd data\n", i);
             free(fileInfo->relocTablesInfo[i].sectionData);
         }
     }
 
-    printf("Freeing symtab data\n");
+    // printf("Freeing symtab data\n");
     free(fileInfo->symtabInfo.sectionData);
 
-    printf("Freeing strtab data\n");
+    // printf("Freeing strtab data\n");
     free(fileInfo->strtab);
 }
 
