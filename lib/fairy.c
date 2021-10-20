@@ -24,12 +24,7 @@ static Elf32_Word Fairy_ReadWord(const uint8_t* data) {
 }
 
 static bool Fairy_VerifyMagic(const uint8_t* data) {
-    int i;
-    for (i = 0; i < 4; i++) {
-        printf("%X %c \n", data[i], data[i]);
-    }
     return (data[0] == 0x7F && data[1] == 'E' && data[2] == 'L' && data[3] == 'F');
-    exit(1);
 }
 
 static uint16_t Fairy_Swap16(uint16_t x) {
@@ -230,16 +225,15 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "symtab") == 0) {
                         fileInfo->symtabInfo.sectionSize = currentSection.sh_size;
                         fileInfo->symtabInfo.sectionData = malloc(currentSection.sh_size);
-                        fseek(file, currentSection.sh_offset, SEEK_SET);
-                        fread(fileInfo->symtabInfo.sectionData, currentSection.sh_size, 1, file);
+                        Fairy_ReadSymbolTable(fileInfo->symtabInfo.sectionData, file, currentSection.sh_offset, currentSection.sh_size);
                     }
                     break;
 
                 case SHT_STRTAB:
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "strtab") == 0) {
+                        printf("strtab found\n");
                         fileInfo->strtab = malloc(currentSection.sh_size);
-                        fseek(file, currentSection.sh_offset, SEEK_SET);
-                        fread(fileInfo->strtab, currentSection.sh_size, 1, file);
+                        Fairy_ReadStringTable(fileInfo->strtab, file, currentSection.sh_offset, currentSection.sh_size);
                     }
                     break;
 
@@ -264,8 +258,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                         fileInfo->relocTablesInfo[relocSection].sectionSize = currentSection.sh_size;
                         fileInfo->relocTablesInfo[relocSection].sectionData = malloc(currentSection.sh_size);
-                        fseek(file, currentSection.sh_offset, SEEK_SET);
-                        fread(fileInfo->relocTablesInfo[relocSection].sectionData, currentSection.sh_size, 1, file);
+                        Fairy_ReadRelocs(fileInfo->relocTablesInfo[relocSection].sectionData, file, currentSection.sh_offset, currentSection.sh_size);
                     }
                     break;
 

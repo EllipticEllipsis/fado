@@ -67,8 +67,7 @@ void Fado_Relocs(FILE* inputFile) {
             FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
 
             Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
-            printf(".word 0x%X # %s\n", currentReloc->relocWord,
-                   &fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name]);
+            printf(".word 0x%X # %s\n", currentReloc->relocWord, &fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name]);
         }
     }
 
