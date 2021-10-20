@@ -24,7 +24,12 @@ static Elf32_Word Fairy_ReadWord(const uint8_t* data) {
 }
 
 static bool Fairy_VerifyMagic(const uint8_t* data) {
+    int i;
+    for (i = 0; i < 4; i++) {
+        printf("%X %c \n", data[i], data[i]);
+    }
     return (data[0] == 0x7F && data[1] == 'E' && data[2] == 'L' && data[3] == 'F');
+    exit(1);
 }
 
 static uint16_t Fairy_Swap16(uint16_t x) {
@@ -79,10 +84,10 @@ bool Fairy_StartsWith(const char* string, const char* initial) {
  */
 
 FairyFileHeader* Fairy_ReadFileHeader(FairyFileHeader* header, FILE* file) {
-    fseek(file, 9, SEEK_SET);
+    fseek(file, 0, SEEK_SET);
     fread(header, 0x34, 1, file);
 
-    if (!Fairy_VerifyMagic(header)) {
+    if (!Fairy_VerifyMagic(header->e_ident)) {
         fprintf(stderr, "Not a valid ELF file\n");
         return NULL;
     }
@@ -203,10 +208,24 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
     {
         size_t currentIndex;
         FairySecHeader currentSection;
+        for (currentIndex = 0; currentIndex < 3; currentIndex++) {
+            fileInfo->relocTablesInfo[currentIndex].sectionData = NULL;
+        }
+
+
         for (currentIndex = 0; currentIndex < fileHeader.e_shnum; currentIndex++) {
             currentSection = sectionTable[currentIndex];
 
             switch (currentSection.sh_type) {
+                case SHT_PROGBITS:
+                    if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
+                        fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += currentSection.sh_size;
+                    } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
+                        fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += currentSection.sh_size;
+                    } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { // May be several
+                        fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += currentSection.sh_size;
+                    }
+
                 case SHT_SYMTAB:
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "symtab") == 0) {
                         fileInfo->symtabInfo.sectionSize = currentSection.sh_size;
@@ -228,14 +247,19 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     /* This assumes only one reloc section of each name */
                     // TODO: is this a problem?
                     {
-                        FairyRelocSection relocSection = FAIRY_REL_OTHER;
+                        FairySection relocSection = FAIRY_SECTION_OTHER;
 
                         if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
-                            relocSection = FAIRY_REL_TEXT;
+                            relocSection = FAIRY_SECTION_TEXT;
+                            printf("Found rel.text section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "data") == 0) {
-                            relocSection = FAIRY_REL_DATA;
+                            relocSection = FAIRY_SECTION_DATA;
+                            printf("Found rel.data section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "rodata") == 0) {
-                            relocSection = FAIRY_REL_RODATA;
+                            relocSection = FAIRY_SECTION_RODATA;
+                            printf("Found rel.rodata section\n");
+                        } else {
+                            break;
                         }
 
                         fileInfo->relocTablesInfo[relocSection].sectionSize = currentSection.sh_size;
@@ -243,26 +267,30 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         fseek(file, currentSection.sh_offset, SEEK_SET);
                         fread(fileInfo->relocTablesInfo[relocSection].sectionData, currentSection.sh_size, 1, file);
                     }
+                    break;
 
                 default:
                     break;
             }
         }
     }
+    printf("Init done.\n");
 }
 
 void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
     size_t i;
     for (i = 0; i < 3; i++) {
         if (fileInfo->relocTablesInfo[i].sectionData != NULL) {
+            printf("Freeing reloc section %zd data\n", i);
             free(fileInfo->relocTablesInfo[i].sectionData);
         }
     }
 
+    printf("Freeing symtab data\n");
     free(fileInfo->symtabInfo.sectionData);
 
+    printf("Freeing strtab data\n");
     free(fileInfo->strtab);
-    free(fileInfo->relocTablesInfo);
 }
 
 //=============================
@@ -299,7 +327,7 @@ void Fairy_PrintSymbolTable(FILE* inputFile) {
                         printf("symtab found\n");
                         symbolTableNum = currentHeader.sh_size / sizeof(FairySym);
                         symbolTable = malloc(currentHeader.sh_size);
-                        Fairy_ReadSymbolTable(symbolTable, currentHeader.sh_offset, currentHeader.sh_size, inputFile);
+                        Fairy_ReadSymbolTable(symbolTable, inputFile, currentHeader.sh_offset, currentHeader.sh_size);
                     }
                     break;
 
@@ -391,7 +419,7 @@ void Fairy_PrintRelocs(FILE* inputFile) {
     sectionTable = malloc(fileHeader.e_shentsize * fileHeader.e_shnum);
     shstrndx = fileHeader.e_shstrndx;
 
-    Fairy_ReadSectionTable(sectionTable, fileHeader.e_shoff, fileHeader.e_shnum, inputFile);
+    Fairy_ReadSectionTable(sectionTable, inputFile, fileHeader.e_shoff, fileHeader.e_shnum);
 
     shstrtab = malloc(sectionTable[shstrndx].sh_size * sizeof(char));
 
@@ -472,7 +500,7 @@ void Fairy_PrintSectionTable(FILE* inputFile) {
     sectionTable = malloc(fileHeader.e_shentsize * fileHeader.e_shnum);
     shstrndx = fileHeader.e_shstrndx;
 
-    Fairy_ReadSectionTable(sectionTable, fileHeader.e_shoff, fileHeader.e_shnum, inputFile);
+    Fairy_ReadSectionTable(sectionTable, inputFile, fileHeader.e_shoff, fileHeader.e_shnum);
 
     shstrtab = malloc(sectionTable[shstrndx].sh_size * sizeof(char));
 
@@ -787,7 +815,7 @@ uint32_t Fairy_PackReloc(FairyOverlayRelSection sec, FairyRel rel) {
     return (sec << 0x1E) | (ELF32_R_TYPE(rel.r_info) << 0x18) | rel.r_offset;
 }
 
-void Fairy_PrintSectionSizes(FairySecHeader* sectionTable, size_t tableSize, char* shstrtab, FILE* inputFile) {
+void Fairy_PrintSectionSizes(FairySecHeader* sectionTable, FILE* inputFile, size_t tableSize, char* shstrtab) {
     size_t number = tableSize / sizeof(FairySecHeader);
     FairySecHeader currentHeader;
     char* sectionName;
@@ -903,7 +931,7 @@ void Fairy_PrintSectionSizes(FairySecHeader* sectionTable, size_t tableSize, cha
     symtab = malloc(symtabHeader.sh_size);
 
     // TODO: Consider replacing this with a lighter-weight read: sufficient to get the name, shndx
-    Fairy_ReadSymbolTable(symtab, symtabHeader.sh_offset, symtabHeader.sh_size, inputFile);
+    Fairy_ReadSymbolTable(symtab, inputFile, symtabHeader.sh_offset, symtabHeader.sh_size);
 
     /* Obtain the string table */
     strtab = malloc(strtabHeader.sh_size);
@@ -966,14 +994,14 @@ void PrintZeldaReloc(FILE* inputFile) {
     sectionTable = malloc(fileHeader.e_shentsize * fileHeader.e_shnum);
     shstrndx = fileHeader.e_shstrndx;
 
-    Fairy_ReadSectionTable(sectionTable, fileHeader.e_shoff, fileHeader.e_shnum, inputFile);
+    Fairy_ReadSectionTable(sectionTable, inputFile, fileHeader.e_shoff, fileHeader.e_shnum);
 
     shstrtab = malloc(sectionTable[shstrndx].sh_size * sizeof(char));
 
     fseek(inputFile, sectionTable[shstrndx].sh_offset, SEEK_SET);
     fread(shstrtab, sectionTable[shstrndx].sh_size, 1, inputFile);
 
-    Fairy_PrintSectionSizes(sectionTable, fileHeader.e_shentsize * fileHeader.e_shnum, shstrtab, inputFile);
+    Fairy_PrintSectionSizes(sectionTable, inputFile, fileHeader.e_shentsize * fileHeader.e_shnum, shstrtab);
 
     free(sectionTable);
     free(shstrtab);

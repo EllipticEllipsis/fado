@@ -22,15 +22,16 @@ typedef struct {
 typedef struct {
     FairySectionInfo symtabInfo;
     char* strtab;
+    size_t progBitsSizes[3];
     FairySectionInfo relocTablesInfo[3];
 } FairyFileInfo;
 
 typedef enum {
-    FAIRY_REL_TEXT,
-    FAIRY_REL_DATA,
-    FAIRY_REL_RODATA,
-    FAIRY_REL_OTHER //,
-} FairyRelocSection;
+    FAIRY_SECTION_TEXT,
+    FAIRY_SECTION_DATA,
+    FAIRY_SECTION_RODATA,
+    FAIRY_SECTION_OTHER //,
+} FairySection;
 
 
 FairyFileHeader* Fairy_ReadFileHeader(FairyFileHeader* header, FILE* file);

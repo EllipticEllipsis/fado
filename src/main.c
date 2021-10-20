@@ -12,6 +12,7 @@
 #include "help.h"
 
 #include "fairy.h"
+#include "fado.h"
 
 #define OPTSTR "h"
 
@@ -68,7 +69,8 @@ int main(int argc, char **argv) {
     printf("Using input file %s\n", argv[optind]);
 
     // Fairy_PrintSymbolTable(inputFile);
-    PrintZeldaReloc(inputFile);
+    // PrintZeldaReloc(inputFile);
+    Fado_Relocs(inputFile);
 
     // Fairy_PrintRelocs(inputFile);
 
