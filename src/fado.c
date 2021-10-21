@@ -7,7 +7,70 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "fairy.h"
+
+
+/* String-finding-related functions */
+
+typedef struct {
+    const char** list;
+    unsigned int count;
+} FadoStringList;
+
+void Fado_InitStringList(FadoStringList* stringLists, FairyFileInfo* fileInfo, int numFiles) {
+    int currentFile;
+    int currentSym;
+    int symCount;
+
+    for (currentFile = 0; currentFile < numFiles; currentFile++) {
+        FairySym* symtab = fileInfo[currentFile].symtabInfo.sectionData;
+        symCount = 0;
+
+        /* Count defined symbols */
+        for (currentSym = 0; currentSym < fileInfo->symtabInfo.sectionSize / sizeof(FairySym); currentSym++) {
+            if (symtab[currentSym].st_shndx != STN_UNDEF) {
+                symCount++;
+            }
+        }
+
+        stringLists[currentFile].list = malloc(symCount * sizeof(char*));
+        stringLists[currentFile].count = symCount;
+
+        /* Build array of pointers to defined symbols' names */
+        symCount = 0;
+        for (currentSym = 0; currentSym < fileInfo->symtabInfo.sectionSize / sizeof(FairySym); currentSym++) {
+            if (symtab[currentSym].st_shndx != STN_UNDEF) {
+                stringLists[currentFile].list[symCount] = fileInfo[currentFile].strtab[symtab[currentSym].st_name];
+                symCount++;
+            }
+        }
+    }
+}
+
+bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, FadoStringList* stringLists, int numFiles) {
+    int currentFile;
+    int currentString;
+
+    for (currentFile; currentFile < numFiles; currentFile++) {
+        if (currentFile == thisFile) {
+            continue;
+        }
+        for (currentString = 0; currentString < stringLists[currentFile].count; currentString++) {
+            if (strcmp(name, stringLists[currentFile].list[currentString]) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void Fado_DestroyStringList(FadoStringList* stringLists, int numFiles) {
+    int currentFile;
+    for (currentFile; currentFile < numFiles; currentFile++) {
+        free(stringLists[currentFile].list);
+    }
+}
 
 typedef struct {
     size_t symbolIndex;

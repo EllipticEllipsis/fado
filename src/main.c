@@ -53,7 +53,7 @@ char* GetOverlayNameFromFilename(const char* src) {
 
     for (ptr = src; *ptr != '\0'; ptr++) {
         if (*ptr == PATH_SEPARATOR) {
-            start = end;
+            start = end + 1;
             end = ptr;
         }
     }
@@ -63,7 +63,7 @@ char* GetOverlayNameFromFilename(const char* src) {
     }
 
     ret = malloc((end - start) * sizeof(char));
-    memcpy(ret, start + 1, end - start - 1);
+    memcpy(ret, start, end - start);
     ret[end - start] = '\0';
 
     return ret;
