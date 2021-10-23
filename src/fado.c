@@ -36,7 +36,7 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
     for (currentFile = 0; currentFile < numFiles; currentFile++) {
         FairySym* symtab = fileInfo[currentFile].symtabInfo.sectionData;
 
-        stringVectors[currentFile] = vc_vector_create(0x10, sizeof(char*), free);
+        stringVectors[currentFile] = vc_vector_create(0x10, sizeof(char*), NULL);
 
         /* Build array of pointers to defined symbols' names */
         for (currentSym = 0; currentSym < fileInfo[currentFile].symtabInfo.sectionSize / sizeof(FairySym);
@@ -76,6 +76,7 @@ void Fado_DestroyStringVectors(vc_vector** stringVectors, int numFiles) {
     for (currentFile = 0; currentFile < numFiles; currentFile++) {
         vc_vector_release(stringVectors[currentFile]);
     }
+    free(stringVectors);
 }
 
 typedef struct {
@@ -218,11 +219,11 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
 
         for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
             FairyRel* relSection = fileInfos[currentFile].relocTablesInfo[section].sectionData;
-            // if (relSection == NULL) {
-            //     // printf("Ignoring empty reloc section\n");
+            if (relSection == NULL) {
+                printf("Ignoring empty reloc section\n");
             //     relocList[section] = NULL;
-            //     continue;
-            // }
+                continue;
+            }
 
             // relocList[section] =
             //     malloc(fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel) * sizeof(FadoRelocInfo));
@@ -261,9 +262,13 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
         padCount = -(relocCount + 2) & 3;
 
         for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
-            FairyRel* relSection = fileInfos[0].relocTablesInfo[section].sectionData;
+            // FairyRel* relSection = fileInfos[0].relocTablesInfo[section].sectionData;
 
-            if (relSection == NULL) {
+            // if (relSection == NULL) {
+            //     // printf("Ignoring empty reloc section\n");
+            //     continue;
+            // }
+            if (vc_vector_count(relocList[section]) == 0) {
                 // printf("Ignoring empty reloc section\n");
                 continue;
             }
@@ -272,9 +277,9 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
 
             // for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
             //      relocIndex++)
-            FadoRelocInfo* reloc;
-                 VC_FOREACH(reloc, relocList[section]) {
-                FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
+            FadoRelocInfo* currentReloc;
+                 VC_FOREACH(currentReloc, relocList[section]) {
+                // FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
 
                 if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
                     printf(".word 0x%X # %-6s %-10s 0x%06X %s\n", currentReloc->relocWord,
@@ -292,28 +297,28 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
         printf("\n.word 0x%08X # ", 4 * (relocCount + 1));
     }
 
-    printf("\nFinish writing variables\n");
+    // printf("\nFinish writing variables\n");
     for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
-        printf("Freeing file %d\n", currentFile);
+        // printf("Freeing file %d\n", currentFile);
         Fairy_DestroyFile(&fileInfos[currentFile]);
-        printf("Freed file %d\n", currentFile);
+        // printf("Freed file %d\n", currentFile);
     }
 
     for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
         if (relocList[section] != NULL) {
-            free(relocList[section]);
+            vc_vector_release(relocList[section]);
         }
-        printf("Freed relocList[%d]\n", section);
+        // printf("Freed relocList[%d]\n", section);
     }
 
-    puts("1");
-    puts("2");
-    puts("3");
-    printf("Freeing string vectors\n");
+    // puts("1");
+    // puts("2");
+    // puts("3");
+    // printf("Freeing string vectors\n");
     Fado_DestroyStringVectors(stringVectors, inputFilesCount);
-    printf("Freed string vectors\n");
-    printf("Freeing symtabs\n");
+    // printf("Freed string vectors\n");
+    // printf("Freeing symtabs\n");
     free(symtabs);
-    printf("Freed symtabs\n");
+    // printf("Freed symtabs\n");
     free(fileInfos);
 }

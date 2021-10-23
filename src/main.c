@@ -204,6 +204,7 @@ int main(int argc, char** argv) {
         // PrintZeldaReloc(inputFile);
 
         char* ovlName = GetOverlayNameFromFilename(argv[optind]);
+        fprintf(outputFile, ".section .ovl\n");
         fprintf(outputFile, "# _%sOverlayInfo\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentTextSize\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentDataSize\n", ovlName);
