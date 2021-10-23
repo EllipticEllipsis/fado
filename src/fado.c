@@ -83,10 +83,11 @@ typedef struct {
     uint32_t relocWord;
 } FadoRelocInfo;
 
-FadoRelocInfo* Fado_MakeReloc(FadoRelocInfo* relocInfo, FairySection section, FairyRel* data) {
+FadoRelocInfo Fado_MakeReloc(FairySection section, FairyRel* data) {
+    FadoRelocInfo relocInfo = { 0 };
     uint32_t sectionPrefix = 0;
 
-    relocInfo->symbolIndex = ELF32_R_SYM(data->r_info);
+    relocInfo.symbolIndex = ELF32_R_SYM(data->r_info);
 
     switch (section) {
         case FAIRY_SECTION_TEXT:
@@ -105,7 +106,7 @@ FadoRelocInfo* Fado_MakeReloc(FadoRelocInfo* relocInfo, FairySection section, Fa
             fprintf(stderr, "warning: Relocation section is invalid.\n");
             break;
     }
-    relocInfo->relocWord =
+    relocInfo.relocWord =
         ((sectionPrefix & 3) << 0x1E) | (ELF32_R_TYPE(data->r_info) << 0x18) | (data->r_offset & 0xFFFFFF);
 
     return relocInfo;
@@ -199,6 +200,7 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
     FairySection section;
     size_t relocIndex;
 
+    printf("%s\n", __func__);
     // fileInfos = malloc(inputFilesCount * sizeof(FairyFileInfo));
     // symtabs = malloc(inputFilesCount * sizeof(FairySym*));
     for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
@@ -228,18 +230,18 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
             for (relocIndex = 0;
                  relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
                  relocIndex++) {
-                FadoRelocInfo* currentReloc = NULL;
-                Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
+                FadoRelocInfo currentReloc = Fado_MakeReloc(section, &relSection[relocIndex]);
 
-                if (symtabs[currentFile][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+                if (symtabs[currentFile][currentReloc.symbolIndex].st_shndx != STN_UNDEF) {
                     if (Fado_FindSymbolNameInOtherFiles(
-                            &fileInfos[currentFile].strtab[symtabs[currentFile][currentReloc->symbolIndex].st_name],
+                            &fileInfos[currentFile].strtab[symtabs[currentFile][currentReloc.symbolIndex].st_name],
                             currentFile, stringVectors, inputFilesCount)) {
                         continue;
                     }
 
-                    currentReloc->relocWord += sectionOffset[section];
-                    vc_vector_push_back(relocList[section], currentReloc);
+                    currentReloc.relocWord += sectionOffset[section];
+                    vc_vector_push_back(relocList[section], &currentReloc);
+                    relocCount++;
                 }
             }
 
@@ -302,6 +304,9 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
         printf("Freed relocList[%d]\n", section);
     }
 
+    puts("1");
+    puts("2");
+    puts("3");
     printf("Freeing string vectors\n");
     Fado_DestroyStringVectors(stringVectors, inputFilesCount);
     printf("Freed string vectors\n");
