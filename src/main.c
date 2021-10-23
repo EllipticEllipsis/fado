@@ -45,52 +45,71 @@
 
 //     return ovlName;
 // }
+#include <vc_vector/vc_vector.h>
 
+// void Test_vc_vector() {
+//     vc_vector* v = vc_vector_create(0, sizeof(int), NULL);
 
-void Test() {
-    int* array = NULL;
-    array = HESTU_INIT(array, 4);
-    HESTU_ADDITEM(array, 1);
-    HESTU_ADDITEM(array, 2);
-    HESTU_ADDITEM(array, 3);
-    HESTU_ADDITEM(array, 18);
-    HESTU_ADDITEM(array, 36);
+//     {
+//         size_t i;
+//         int x = 1;
+//         for (i = 0; i < 10; i++) {
+//             x *= i + 1;
+//             vc_vector_push_back(v, &x);
+//         }
+//         for (i = 0; i < vc_vector_count(v); i++) {
+//             int* temp = vc_vector_at(v, i);
+//             printf("%d\n", *temp);
+//         }
+//     }
 
-    {
-        size_t i;
-        for (i = 0; i < HESTU_HEADER(array)->count; i++) {
-            printf("%d, ", array[i]);
-        }
-        putchar('\n');
-    }
-    printf("Freeing array\n");
-    HESTU_DESTROY(array);
-    printf("Array freed\n");
-}
+//     vc_vector_release(v);
+// }
 
-TYPEDEF_DYNAMIC_ARRAY(int)
+// void Test() {
+//     int* array = NULL;
+//     array = HESTU_INIT(array, 4);
 
-void Test_Template() {
-    DYNAMIC_ARRAY(int) dynArray;
+//     HESTU_ADDITEM(array, 1);
+//     HESTU_ADDITEM(array, 2);
+//     HESTU_ADDITEM(array, 3);
+//     HESTU_ADDITEM(array, 18);
+//     HESTU_ADDITEM(array, 36);
 
-    intArray_Init(&dynArray);
+//     {
+//         size_t i;
+//         for (i = 0; i < HESTU_HEADER(array)->count; i++) {
+//             printf("%d, ", array[i]);
+//         }
+//         putchar('\n');
+//     }
+//     printf("Freeing array\n");
+//     HESTU_DESTROY(array);
+//     printf("Array freed\n");
+// }
 
-    intArray_AddItem(&dynArray, 1);
-    intArray_AddItem(&dynArray, 2);
-    intArray_AddItem(&dynArray, 3);
-    intArray_AddItem(&dynArray, 18);
-    intArray_AddItem(&dynArray, 36);
+// TYPEDEF_DYNAMIC_ARRAY(int)
 
-    {
-        size_t i;
-        for (i = 0; i < dynArray.count; i++) {
-            printf("%d, ", dynArray.array[i]);
-        }
-        putchar('\n');
-    }
-    intArray_Destroy(&dynArray);
-}
+// void Test_Template() {
+//     DYNAMIC_ARRAY(int) dynArray;
 
+//     intArray_Init(&dynArray);
+
+//     intArray_AddItem(&dynArray, 1);
+//     intArray_AddItem(&dynArray, 2);
+//     intArray_AddItem(&dynArray, 3);
+//     intArray_AddItem(&dynArray, 18);
+//     intArray_AddItem(&dynArray, 36);
+
+//     {
+//         size_t i;
+//         for (i = 0; i < dynArray.count; i++) {
+//             printf("%d, ", dynArray.array[i]);
+//         }
+//         putchar('\n');
+//     }
+//     intArray_Destroy(&dynArray);
+// }
 
 char* GetOverlayNameFromFilename(const char* src) {
     char* ret;
@@ -109,7 +128,7 @@ char* GetOverlayNameFromFilename(const char* src) {
         return NULL;
     }
 
-    ret = malloc((end - start) * sizeof(char));
+    ret = malloc((end - start + 1) * sizeof(char));
     memcpy(ret, start, end - start);
     ret[end - start] = '\0';
 
@@ -137,7 +156,9 @@ void ConstructLongOpts() {
 
 int main(int argc, char** argv) {
     int opt;
-    FILE* inputFile;
+    int inputFilesCount;
+    FILE** inputFiles;
+    FILE* outputFile = stdout;
 
     ConstructLongOpts();
 
@@ -167,26 +188,44 @@ int main(int argc, char** argv) {
 
     printf("Options processed\n");
 
-    inputFile = fopen(argv[optind], "rb");
-    printf("Using input file %s\n", argv[optind]);
+    {
+        int i;
 
-    // Fairy_PrintSymbolTable(inputFile);
-    // PrintZeldaReloc(inputFile);
-    // {
-    //     char* ovlName = GetOverlayNameFromFilename(argv[optind]);
-    //     printf("%s\n", ovlName);
-    //     free(ovlName);
-    // }
-    // Fairy_PrintRelocs(inputFile);
+        inputFilesCount = argc - optind;
+        inputFiles = malloc(inputFilesCount * sizeof(FILE*));
+        for (i = 0; i < inputFilesCount; i++) {
+            printf("Using input file %s\n", argv[optind + i]);
+            inputFiles[i] = fopen(argv[optind + i], "rb");
+        }
+        printf("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s" ) );
+        
 
-    // Fado_Relocs(inputFile);
+        // Fairy_PrintSymbolTable(inputFile);
+        // PrintZeldaReloc(inputFile);
 
-    Test();
-    Test_Template();
+        char* ovlName = GetOverlayNameFromFilename(argv[optind]);
+        fprintf(outputFile, "# _%sOverlayInfo\n", ovlName);
+        fprintf(outputFile, ".word _%sSegmentTextSize\n", ovlName);
+        fprintf(outputFile, ".word _%sSegmentDataSize\n", ovlName);
+        fprintf(outputFile, ".word _%sSegmentRoDataSize\n", ovlName);
+        fprintf(outputFile, ".word _%sSegmentBssSize\n", ovlName);
 
+        Fado_Relocs(inputFiles, inputFilesCount);
 
+        fprintf(outputFile, "%sOverlayInfoOffset\n", ovlName);
 
-    fclose(inputFile);
+        free(ovlName);
+
+        // Fairy_PrintRelocs(inputFile);
+
+        // Test_vc_vector();
+        // Test();
+        // Test_Template();
+        for (i = 0; i < inputFilesCount; i++) {
+            fclose(inputFiles[i]);
+        }
+        free(inputFiles);
+    }
 
     return EXIT_SUCCESS;
 }

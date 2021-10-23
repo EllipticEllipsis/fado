@@ -41,7 +41,7 @@ void* Hestu_Resize(HestuArrayHeader* header, size_t elementSize, size_t newCapac
     if (header->count > newCapacity) {
         fprintf(stderr, "warning: count %zd > newCapacity %zd; elements will be lost\n", header->count, newCapacity);
     }
-    printf("Reallocking to %d\n", newCapacity);
+    printf("Reallocking to %zd\n", newCapacity);
     header = realloc(header, sizeof(HestuArrayHeader) +  newCapacity * elementSize);
     assert( header != NULL || !"resizing header failed");
     return header + 1;

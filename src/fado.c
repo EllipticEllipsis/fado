@@ -19,8 +19,8 @@ typedef struct {
 
 void Fado_InitStringList(FadoStringList* stringLists, FairyFileInfo* fileInfo, int numFiles) {
     int currentFile;
-    int currentSym;
-    int symCount;
+    size_t currentSym;
+    size_t symCount;
 
     for (currentFile = 0; currentFile < numFiles; currentFile++) {
         FairySym* symtab = fileInfo[currentFile].symtabInfo.sectionData;
@@ -40,7 +40,7 @@ void Fado_InitStringList(FadoStringList* stringLists, FairyFileInfo* fileInfo, i
         symCount = 0;
         for (currentSym = 0; currentSym < fileInfo->symtabInfo.sectionSize / sizeof(FairySym); currentSym++) {
             if (symtab[currentSym].st_shndx != STN_UNDEF) {
-                stringLists[currentFile].list[symCount] = fileInfo[currentFile].strtab[symtab[currentSym].st_name];
+                stringLists[currentFile].list[symCount] = &fileInfo[currentFile].strtab[symtab[currentSym].st_name];
                 symCount++;
             }
         }
@@ -49,9 +49,9 @@ void Fado_InitStringList(FadoStringList* stringLists, FairyFileInfo* fileInfo, i
 
 bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, FadoStringList* stringLists, int numFiles) {
     int currentFile;
-    int currentString;
+    size_t currentString;
 
-    for (currentFile; currentFile < numFiles; currentFile++) {
+    for (currentFile = 0; currentFile < numFiles; currentFile++) {
         if (currentFile == thisFile) {
             continue;
         }
@@ -66,7 +66,7 @@ bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, FadoStringL
 
 void Fado_DestroyStringList(FadoStringList* stringLists, int numFiles) {
     int currentFile;
-    for (currentFile; currentFile < numFiles; currentFile++) {
+    for (currentFile = 0; currentFile < numFiles; currentFile++) {
         free(stringLists[currentFile].list);
     }
 }
@@ -77,7 +77,7 @@ typedef struct {
 } FadoRelocInfo;
 
 FadoRelocInfo* Fado_MakeReloc(FadoRelocInfo* relocInfo, FairySection section, FairyRel* data) {
-    uint8_t sectionPrefix = 0;
+    uint32_t sectionPrefix = 0;
 
     relocInfo->symbolIndex = ELF32_R_SYM(data->r_info);
 
@@ -95,10 +95,10 @@ FadoRelocInfo* Fado_MakeReloc(FadoRelocInfo* relocInfo, FairySection section, Fa
             break;
 
         default:
-            fprintf(stderr, "Warning: Relocation section is invalid.\n");
+            fprintf(stderr, "warning: Relocation section is invalid.\n");
             break;
     }
-    relocInfo->relocWord = (sectionPrefix << 0x1E) | (ELF32_R_TYPE(data->r_info) << 0x18) | (data->r_offset & 0xFFFFFF);
+    relocInfo->relocWord = ((sectionPrefix & 3) << 0x1E) | (ELF32_R_TYPE(data->r_info) << 0x18) | (data->r_offset & 0xFFFFFF);
 
     return relocInfo;
 }
@@ -165,35 +165,39 @@ static const FairyDefineString relTypeNames[] = {
     FAIRY_DEF_STRING(R, MIPS_NUM),
 };
 
-void Fado_Relocs(FILE* inputFile) {
-    FairyFileInfo fileInfo;
+void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
+    int currentFile;
+    FairyFileInfo* fileInfos = malloc(inputFilesCount * sizeof(FairyFileInfo));
     FadoRelocInfo* relocList[FAIRY_SECTION_OTHER]; // Maximum number of reloc sections
     size_t relocIndex;
     FairySection section;
-    FairySym* symtab;
+    FairySym** symtabs = malloc(inputFilesCount * sizeof(FairySym*));
     size_t relocCount = 0;
     uint8_t padCount;
 
-    Fairy_InitFile(&fileInfo, inputFile);
-    symtab = fileInfo.symtabInfo.sectionData;
-    // printf("symtab set\n");
+    for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
+        Fairy_InitFile(&fileInfos[currentFile], inputFiles[currentFile]);
+        symtabs[currentFile] = fileInfos[currentFile].symtabInfo.sectionData;
+    }
+    // printf("symtabs set\n");
 
     for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
-        FairyRel* relSection = fileInfo.relocTablesInfo[section].sectionData;
+        FairyRel* relSection = fileInfos[0].relocTablesInfo[section].sectionData;
 
         if (relSection == NULL) {
             // printf("Ignoring empty reloc section\n");
+            relocList[section] = NULL;
             continue;
         }
         relocList[section] =
-            malloc(fileInfo.relocTablesInfo[section].sectionSize / sizeof(FairyRel) * sizeof(FadoRelocInfo));
+            malloc(fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel) * sizeof(FadoRelocInfo));
 
-        for (relocIndex = 0; relocIndex < fileInfo.relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+        for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
              relocIndex++) {
             FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
             Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
-            if (symtab[currentReloc->symbolIndex].st_shndx == STN_UNDEF) {
-                // if (Fado_FindSymbolNameInOtherFiles(fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name],
+            if (symtabs[0][currentReloc->symbolIndex].st_shndx == STN_UNDEF) {
+                // if (Fado_FindSymbolNameInOtherFiles(fileInfo.strtab[symtabs[currentReloc->symbolIndex].st_name],
                 //                                     stringLists, numFiles)) {
                 //     relocCount++;
                 // }
@@ -205,25 +209,25 @@ void Fado_Relocs(FILE* inputFile) {
         //      relocIndex++) {
         //     FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
         //     Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
-        //     if (symtab[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+        //     if (symtabs[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
         //         relocCount++;
         //     }
         // }
     }
 
     {
-        char overlayName[] = "ovl_Name_Goes_Here";
-        printf(".section .ovl\n# %sOverlayInfo\n", overlayName);
-        printf(".word _%sSegmentTextSize\n", overlayName);
-        printf(".word _%sSegmentDataSize\n", overlayName);
-        printf(".word _%sSegmentRoDataSize\n", overlayName);
-        printf(".word _%sSegmentBssSize\n", overlayName);
+        // char overlayName[] = "ovl_Name_Goes_Here";
+        // printf(".section .ovl\n# %sOverlayInfo\n", overlayName);
+        // printf(".word _%sSegmentTextSize\n", overlayName);
+        // printf(".word _%sSegmentDataSize\n", overlayName);
+        // printf(".word _%sSegmentRoDataSize\n", overlayName);
+        // printf(".word _%sSegmentBssSize\n", overlayName);
 
         printf("\n.word %zd # relocCount\n", relocCount);
         padCount = -(relocCount + 2) & 3;
 
         for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
-            FairyRel* relSection = fileInfo.relocTablesInfo[section].sectionData;
+            FairyRel* relSection = fileInfos[0].relocTablesInfo[section].sectionData;
 
             if (relSection == NULL) {
                 // printf("Ignoring empty reloc section\n");
@@ -232,16 +236,16 @@ void Fado_Relocs(FILE* inputFile) {
 
             printf("\n# %s RELOCS\n", Fairy_StringFromDefine(relSectionNames, section));
 
-            for (relocIndex = 0; relocIndex < fileInfo.relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+            for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
                  relocIndex++) {
                 FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
 
-                if (symtab[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+                if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
                     printf(".word 0x%X # %-6s %-10s 0x%06X %s\n", currentReloc->relocWord,
                            relSectionNames[section].string,
                            Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
                            currentReloc->relocWord & 0xFFFFFF,
-                           &fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name]);
+                           &fileInfos[0].strtab[symtabs[0][currentReloc->symbolIndex].st_name]);
                 }
             }
         }
@@ -249,8 +253,25 @@ void Fado_Relocs(FILE* inputFile) {
         for (relocCount += 5; ((relocCount + 1) & 3) != 0; relocCount++) {
             printf(".word 0\n");
         }
-        printf("\n.word 0x%08zX # %sOverlayInfoOffset\n", 4 * (relocCount + 1), overlayName);
+        printf("\n.word 0x%08zX # ", 4 * (relocCount + 1));
     }
 
-    Fairy_DestroyFile(&fileInfo);
+    printf("\nFinish writing variables\n");
+    for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
+        printf("Freeing file %d\n", currentFile);
+        Fairy_DestroyFile(&fileInfos[currentFile]);
+        printf("Freed file %d\n", currentFile);
+    }
+
+    for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
+        if (relocList[section] != NULL) {
+        free(relocList[section]);
+        }
+        printf("Freed relocList[%d]\n", section);
+    }
+
+    printf("Freeing symtabs\n");
+    free(symtabs);
+    printf("Freed symtabs\n");
+    free(fileInfos);
 }

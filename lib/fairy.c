@@ -267,6 +267,9 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
             }
         }
     }
+    
+    free(sectionTable);
+    free(shstrtab);
     // printf("Init done.\n");
 }
 

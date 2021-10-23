@@ -30,8 +30,8 @@ C_FILES     := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))
 H_FILES     := $(foreach dir,$(INC),$(wildcard $(dir)/*.h))
 O_FILES     := $(foreach f,$(C_FILES:.c=.o),build/$f)
 
-LIB_DIRS    := $(shell find lib -type d)
-C_LIB_FILES := $(foreach dir,$(LIB_DIRS),$(wildcard $(dir)/*.c))
+LIB_DIRS    := $(shell find lib -type d -not -path "lib/vc_vector")
+C_LIB_FILES := $(foreach dir,$(LIB_DIRS),$(wildcard $(dir)/*.c)) lib/vc_vector/vc_vector.c
 O_LIB_FILES := $(foreach f,$(C_LIB_FILES:.c=.o),build/$f)
 
 # Main targets
@@ -48,7 +48,7 @@ format:
 # create build directories
 $(shell mkdir -p $(foreach dir,$(SRC_DIRS),build/$(dir)) $(foreach dir,$(LIB_DIRS),build/$(dir)))
 
-$(ELF): $(O_FILES) $(O_LIB_FILES)
+$(ELF): $(O_FILES) $(O_LIB_FILES) lib/vc_vector/build/libvc-vector.so
 	$(CC) $(INC) $(WARNINGS) $(CFLAGS) $(OPTFLAGS) $(LDFLAGS) -o $@ $^
 
 build/%.o: %.c $(H_FILES)
