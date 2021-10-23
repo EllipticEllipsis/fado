@@ -270,9 +270,11 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
 
             printf("\n# %s RELOCS\n", Fairy_StringFromDefine(relSectionNames, section));
 
-            for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
-                 relocIndex++) {
-                FadoRelocInfo* currentReloc = vc_vector_at(relocList[section], relocIndex);
+            // for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+            //      relocIndex++)
+            FadoRelocInfo* reloc;
+                 VC_FOREACH(reloc, relocList[section]) {
+                FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
 
                 if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
                     printf(".word 0x%X # %-6s %-10s 0x%06X %s\n", currentReloc->relocWord,
