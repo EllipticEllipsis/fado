@@ -14,7 +14,7 @@ ifeq ($(DEBUG),0)
   OPTFLAGS  := -O2
   CFLAGS    += -Werror
 else
-  OPTFLAGS  := -O0 -g3
+  OPTFLAGS  := -O0 -g3 -DDEBUG_ON
 endif
 
 ifneq ($(ASAN),0)

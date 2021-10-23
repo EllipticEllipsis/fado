@@ -10,7 +10,6 @@
 #include <string.h>
 #include "fairy.h"
 
-
 /* String-finding-related functions */
 
 typedef struct {
@@ -193,10 +192,23 @@ void Fado_Relocs(FILE* inputFile) {
              relocIndex++) {
             FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
             Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
-            if (symtab[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+            if (symtab[currentReloc->symbolIndex].st_shndx == STN_UNDEF) {
+                // if (Fado_FindSymbolNameInOtherFiles(fileInfo.strtab[symtab[currentReloc->symbolIndex].st_name],
+                //                                     stringLists, numFiles)) {
+                //     relocCount++;
+                // }
+            } else {
                 relocCount++;
             }
         }
+        // for (relocIndex = 0; relocIndex < fileInfo.relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+        //      relocIndex++) {
+        //     FadoRelocInfo* currentReloc = &relocList[section][relocIndex];
+        //     Fado_MakeReloc(currentReloc, section, &relSection[relocIndex]);
+        //     if (symtab[currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+        //         relocCount++;
+        //     }
+        // }
     }
 
     {

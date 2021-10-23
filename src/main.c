@@ -13,6 +13,7 @@
 
 #include "fairy.h"
 #include "fado.h"
+#include "hestu/hestu.h"
 
 #if defined _WIN32 || defined __CYGWIN__
 #define PATH_SEPARATOR '\\'
@@ -44,6 +45,52 @@
 
 //     return ovlName;
 // }
+
+
+void Test() {
+    int* array = NULL;
+    array = HESTU_INIT(array, 4);
+    HESTU_ADDITEM(array, 1);
+    HESTU_ADDITEM(array, 2);
+    HESTU_ADDITEM(array, 3);
+    HESTU_ADDITEM(array, 18);
+    HESTU_ADDITEM(array, 36);
+
+    {
+        size_t i;
+        for (i = 0; i < HESTU_HEADER(array)->count; i++) {
+            printf("%d, ", array[i]);
+        }
+        putchar('\n');
+    }
+    printf("Freeing array\n");
+    HESTU_DESTROY(array);
+    printf("Array freed\n");
+}
+
+TYPEDEF_DYNAMIC_ARRAY(int)
+
+void Test_Template() {
+    DYNAMIC_ARRAY(int) dynArray;
+
+    intArray_Init(&dynArray);
+
+    intArray_AddItem(&dynArray, 1);
+    intArray_AddItem(&dynArray, 2);
+    intArray_AddItem(&dynArray, 3);
+    intArray_AddItem(&dynArray, 18);
+    intArray_AddItem(&dynArray, 36);
+
+    {
+        size_t i;
+        for (i = 0; i < dynArray.count; i++) {
+            printf("%d, ", dynArray.array[i]);
+        }
+        putchar('\n');
+    }
+    intArray_Destroy(&dynArray);
+}
+
 
 char* GetOverlayNameFromFilename(const char* src) {
     char* ret;
@@ -125,14 +172,19 @@ int main(int argc, char** argv) {
 
     // Fairy_PrintSymbolTable(inputFile);
     // PrintZeldaReloc(inputFile);
-    Fado_Relocs(inputFile);
     // {
     //     char* ovlName = GetOverlayNameFromFilename(argv[optind]);
     //     printf("%s\n", ovlName);
     //     free(ovlName);
     // }
-
     // Fairy_PrintRelocs(inputFile);
+
+    // Fado_Relocs(inputFile);
+
+    Test();
+    Test_Template();
+
+
 
     fclose(inputFile);
 
