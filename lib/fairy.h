@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <elf.h>
 
+#include "vc_vector/vc_vector.h"
+
 #define FAIRY_DEF_STRING(prefix, x) \
     { prefix##_##x, #x }
 
@@ -27,6 +29,7 @@ typedef struct {
     FairySectionInfo symtabInfo;
     char* strtab;
     size_t progBitsSizes[3];
+    vc_vector* progBitsSections;
     FairySectionInfo relocTablesInfo[3];
 } FairyFileInfo;
 

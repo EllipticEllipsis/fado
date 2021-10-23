@@ -1,10 +1,14 @@
 #include "fairy.h"
+
+#include <assert.h>
 #include <endian.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "vc_vector/vc_vector.h"
 
 #include "fairy_data.c"
 
@@ -189,6 +193,8 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
     FairyFileHeader fileHeader;
     FairySecHeader* sectionTable;
     char* shstrtab;
+    
+    fileInfo->progBitsSections = vc_vector_create(3, sizeof(Elf32_Section), NULL);
 
     Fairy_ReadFileHeader(&fileHeader, file);
 
@@ -213,6 +219,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
             switch (currentSection.sh_type) {
                 case SHT_PROGBITS:
+                    assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += currentSection.sh_size;
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
@@ -281,6 +288,8 @@ void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
             free(fileInfo->relocTablesInfo[i].sectionData);
         }
     }
+
+    vc_vector_release(fileInfo->progBitsSections);
 
     // printf("Freeing symtab data\n");
     free(fileInfo->symtabInfo.sectionData);
