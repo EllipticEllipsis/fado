@@ -48,7 +48,7 @@ format:
 # create build directories
 $(shell mkdir -p $(foreach dir,$(SRC_DIRS),build/$(dir)) $(foreach dir,$(LIB_DIRS),build/$(dir)))
 
-$(ELF): $(O_FILES) $(O_LIB_FILES) lib/vc_vector/build/libvc-vector.so
+$(ELF): $(O_FILES) $(O_LIB_FILES)
 	$(CC) $(INC) $(WARNINGS) $(CFLAGS) $(OPTFLAGS) $(LDFLAGS) -o $@ $^
 
 build/%.o: %.c $(H_FILES)

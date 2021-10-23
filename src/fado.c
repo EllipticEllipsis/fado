@@ -64,10 +64,12 @@ bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, vc_vector**
         //      currentString = vc_vector_next(stringVectors[currentFile], currentString)) {
         VC_FOREACH(currentString, stringVectors[currentFile]) {
             if (strcmp(name, currentString) == 0) {
+                printf("Match found for %s\n", name);
                 return true;
             }
         }
     }
+    printf("No match found for %s\n", name);
     return false;
 }
 
@@ -233,20 +235,21 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
                  relocIndex++) {
                 FadoRelocInfo currentReloc = Fado_MakeReloc(section, &relSection[relocIndex]);
 
-                if (symtabs[currentFile][currentReloc.symbolIndex].st_shndx != STN_UNDEF) {
-                    if (Fado_FindSymbolNameInOtherFiles(
+                if ((symtabs[currentFile][currentReloc.symbolIndex].st_shndx != STN_UNDEF) || Fado_FindSymbolNameInOtherFiles(
                             &fileInfos[currentFile].strtab[symtabs[currentFile][currentReloc.symbolIndex].st_name],
                             currentFile, stringVectors, inputFilesCount)) {
-                        continue;
-                    }
+                        
 
                     currentReloc.relocWord += sectionOffset[section];
+                    printf("section offset: %d\n", sectionOffset[section]);
                     vc_vector_push_back(relocList[section], &currentReloc);
                     relocCount++;
-                }
+                    }
+                
             }
 
-            sectionOffset[section] += fileInfos[currentFile].progBitsSizes[section];
+            // sectionOffset[section] += fileInfos[currentFile].progBitsSizes[section];
+            printf("section offset: %d\n", sectionOffset[section]);
         }
     }
 
@@ -281,13 +284,13 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
                  VC_FOREACH(currentReloc, relocList[section]) {
                 // FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
 
-                if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
-                    printf(".word 0x%X # %-6s %-10s 0x%06X %s\n", currentReloc->relocWord,
+                // if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
+                    printf(".word 0x%X # %-6s %-10s 0x%06X \n", currentReloc->relocWord,
                            relSectionNames[section].string,
                            Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
-                           currentReloc->relocWord & 0xFFFFFF,
-                           &fileInfos[0].strtab[symtabs[0][currentReloc->symbolIndex].st_name]);
-                }
+                           currentReloc->relocWord & 0xFFFFFF
+/*                           , &fileInfos[0].strtab[symtabs[0][currentReloc->symbolIndex].st_name] */);
+                // }
             }
         }
         /* print pads and section size */

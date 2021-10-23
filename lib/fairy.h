@@ -28,7 +28,7 @@ typedef struct {
 typedef struct {
     FairySectionInfo symtabInfo;
     char* strtab;
-    size_t progBitsSizes[3];
+    Elf32_Word progBitsSizes[3];
     vc_vector* progBitsSections;
     FairySectionInfo relocTablesInfo[3];
 } FairyFileInfo;
