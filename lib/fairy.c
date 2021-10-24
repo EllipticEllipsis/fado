@@ -194,6 +194,9 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
     FairySecHeader* sectionTable;
     char* shstrtab;
     int i;
+    
+    assert(fileInfo != NULL);
+    assert(file != NULL);
 
     fileInfo->progBitsSections = vc_vector_create(3, sizeof(Elf32_Section), NULL);
     for (i = 0; i < 3; i++) {
@@ -232,6 +235,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += currentSection.sh_size;
                         printf("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
                     }
+                    break;
 
                 case SHT_SYMTAB:
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "symtab") == 0) {

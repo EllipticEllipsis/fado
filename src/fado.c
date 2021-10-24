@@ -36,15 +36,15 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
     for (currentFile = 0; currentFile < numFiles; currentFile++) {
         FairySym* symtab = fileInfo[currentFile].symtabInfo.sectionData;
 
-        stringVectors[currentFile] = vc_vector_create(0x10, sizeof(char*), NULL);
+        stringVectors[currentFile] = vc_vector_create(0x10, sizeof(char**), NULL);
 
         /* Build array of pointers to defined symbols' names */
         for (currentSym = 0; currentSym < fileInfo[currentFile].symtabInfo.sectionSize / sizeof(FairySym);
              currentSym++) {
             if ((symtab[currentSym].st_shndx != STN_UNDEF) &&
                 Fado_CheckInProgBitsSections(symtab[currentSym].st_shndx, fileInfo[currentFile].progBitsSections)) {
-                assert(vc_vector_push_back(stringVectors[currentFile],
-                                           &fileInfo[currentFile].strtab[symtab[currentSym].st_name]));
+                char* stringPtr = &fileInfo[currentFile].strtab[symtab[currentSym].st_name];
+                assert(vc_vector_push_back(stringVectors[currentFile], &stringPtr));
             }
         }
     }
@@ -52,7 +52,7 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
 
 bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, vc_vector** stringVectors, int numFiles) {
     int currentFile;
-    char* currentString;
+    char** currentString;
 
     for (currentFile = 0; currentFile < numFiles; currentFile++) {
         if (currentFile == thisFile) {
@@ -63,13 +63,13 @@ bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, vc_vector**
         //      currentString != vc_vector_end(stringVectors[currentFile]);
         //      currentString = vc_vector_next(stringVectors[currentFile], currentString)) {
         VC_FOREACH(currentString, stringVectors[currentFile]) {
-            if (strcmp(name, currentString) == 0) {
-                printf("Match found for %s\n", name);
+            if (strcmp(name, *currentString) == 0) {
+                // printf("Match found for %s\n", name);
                 return true;
             }
         }
     }
-    printf("No match found for %s\n", name);
+    // printf("No match found for %s\n", name);
     return false;
 }
 
@@ -221,34 +221,32 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
 
         for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
             FairyRel* relSection = fileInfos[currentFile].relocTablesInfo[section].sectionData;
-            if (relSection == NULL) {
-                printf("Ignoring empty reloc section\n");
-            //     relocList[section] = NULL;
-                continue;
-            }
+            if (relSection != NULL) {
+                // relocList[section] =
+                //     malloc(fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel) *
+                //     sizeof(FadoRelocInfo));
 
-            // relocList[section] =
-            //     malloc(fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel) * sizeof(FadoRelocInfo));
+                for (relocIndex = 0;
+                     relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+                     relocIndex++) {
+                    FadoRelocInfo currentReloc = Fado_MakeReloc(section, &relSection[relocIndex]);
 
-            for (relocIndex = 0;
-                 relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
-                 relocIndex++) {
-                FadoRelocInfo currentReloc = Fado_MakeReloc(section, &relSection[relocIndex]);
-
-                if ((symtabs[currentFile][currentReloc.symbolIndex].st_shndx != STN_UNDEF) || Fado_FindSymbolNameInOtherFiles(
+                    if ((symtabs[currentFile][currentReloc.symbolIndex].st_shndx != STN_UNDEF) ||
+                        Fado_FindSymbolNameInOtherFiles(
                             &fileInfos[currentFile].strtab[symtabs[currentFile][currentReloc.symbolIndex].st_name],
                             currentFile, stringVectors, inputFilesCount)) {
-                        
 
-                    currentReloc.relocWord += sectionOffset[section];
-                    printf("section offset: %d\n", sectionOffset[section]);
-                    vc_vector_push_back(relocList[section], &currentReloc);
-                    relocCount++;
+                        currentReloc.relocWord += sectionOffset[section];
+                        printf("section offset: %d\n", sectionOffset[section]);
+                        vc_vector_push_back(relocList[section], &currentReloc);
+                        relocCount++;
                     }
-                
+                }
+            } else {
+                printf("Ignoring empty reloc section\n");
             }
 
-            // sectionOffset[section] += fileInfos[currentFile].progBitsSizes[section];
+            sectionOffset[section] += fileInfos[currentFile].progBitsSizes[section];
             printf("section offset: %d\n", sectionOffset[section]);
         }
     }
@@ -281,11 +279,11 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
             // for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
             //      relocIndex++)
             FadoRelocInfo* currentReloc;
-                 VC_FOREACH(currentReloc, relocList[section]) {
+            VC_FOREACH(currentReloc, relocList[section]) {
                 // FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
 
                 // if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
-                    printf(".word 0x%X # %-6s %-10s 0x%06X \n", currentReloc->relocWord,
+                printf(".word 0x%X # %-6s %-10s 0x%06X \n", currentReloc->relocWord,
                            relSectionNames[section].string,
                            Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
                            currentReloc->relocWord & 0xFFFFFF
