@@ -177,7 +177,8 @@ static const FairyDefineString relTypeNames[] = {
     FAIRY_DEF_STRING(R, MIPS_NUM),
 };
 
-void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
+void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
+    // printf("%s\n", __func__);
     /* General information structs */
     FairyFileInfo* fileInfos = malloc(inputFilesCount * sizeof(FairyFileInfo));
 
@@ -203,7 +204,6 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
     FairySection section;
     size_t relocIndex;
 
-    printf("%s\n", __func__);
     // fileInfos = malloc(inputFilesCount * sizeof(FairyFileInfo));
     // symtabs = malloc(inputFilesCount * sizeof(FairySym*));
     for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
@@ -237,17 +237,17 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
                             currentFile, stringVectors, inputFilesCount)) {
 
                         currentReloc.relocWord += sectionOffset[section];
-                        printf("section offset: %d\n", sectionOffset[section]);
+                        // printf("section offset: %d\n", sectionOffset[section]);
                         vc_vector_push_back(relocList[section], &currentReloc);
                         relocCount++;
                     }
                 }
             } else {
-                printf("Ignoring empty reloc section\n");
+                // printf("Ignoring empty reloc section\n");
             }
 
             sectionOffset[section] += fileInfos[currentFile].progBitsSizes[section];
-            printf("section offset: %d\n", sectionOffset[section]);
+            // printf("section offset: %d\n", sectionOffset[section]);
         }
     }
 
@@ -259,7 +259,7 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
         // printf(".word _%sSegmentRoDataSize\n", overlayName);
         // printf(".word _%sSegmentBssSize\n", overlayName);
 
-        printf("\n.word %d # relocCount\n", relocCount);
+        fprintf(outputFile, "\n.word %d # relocCount\n", relocCount);
         padCount = -(relocCount + 2) & 3;
 
         for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
@@ -274,7 +274,7 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
                 continue;
             }
 
-            printf("\n# %s RELOCS\n", Fairy_StringFromDefine(relSectionNames, section));
+            fprintf(outputFile, "\n# %s RELOCS\n", Fairy_StringFromDefine(relSectionNames, section));
 
             // for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
             //      relocIndex++)
@@ -283,7 +283,7 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
                 // FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
 
                 // if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
-                printf(".word 0x%X # %-6s %-10s 0x%06X \n", currentReloc->relocWord,
+                fprintf(outputFile, ".word 0x%X # %-6s %-10s 0x%06X \n", currentReloc->relocWord,
                            relSectionNames[section].string,
                            Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
                            currentReloc->relocWord & 0xFFFFFF
@@ -293,9 +293,9 @@ void Fado_Relocs(FILE** inputFiles, int inputFilesCount) {
         }
         /* print pads and section size */
         for (relocCount += 5; ((relocCount + 1) & 3) != 0; relocCount++) {
-            printf(".word 0\n");
+            fprintf(outputFile, ".word 0\n");
         }
-        printf("\n.word 0x%08X # ", 4 * (relocCount + 1));
+        fprintf(outputFile, "\n.word 0x%08X # ", 4 * (relocCount + 1));
     }
 
     // printf("\nFinish writing variables\n");

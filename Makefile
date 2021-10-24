@@ -30,8 +30,9 @@ C_FILES     := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))
 H_FILES     := $(foreach dir,$(INC),$(wildcard $(dir)/*.h))
 O_FILES     := $(foreach f,$(C_FILES:.c=.o),build/$f)
 
-LIB_DIRS    := $(shell find lib -type d -not -path "lib/vc_vector")
-C_LIB_FILES := $(foreach dir,$(LIB_DIRS),$(wildcard $(dir)/*.c)) lib/vc_vector/vc_vector.c
+LIB_DIRS    := $(shell find lib -type d)
+# exclude test file since we don't want it
+C_LIB_FILES := $(filter-out lib/vc_vector/vc_vector_test.c, $(foreach dir,$(LIB_DIRS),$(wildcard $(dir)/*.c)))
 O_LIB_FILES := $(foreach f,$(C_LIB_FILES:.c=.o),build/$f)
 
 # Main targets

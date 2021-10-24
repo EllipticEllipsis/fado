@@ -135,13 +135,17 @@ char* GetOverlayNameFromFilename(const char* src) {
     return ret;
 }
 
-#define OPTSTR "h"
+#define OPTSTR "o:h"
 
+// clang-format off
 static const OptInfo optInfo[] = {
+    { { "output-file", required_argument, NULL, 'o' }, "FILE", "select output file. Will use stdout if none is specified" },
+
     { { "help", no_argument, NULL, 'h' }, NULL, "Display this message and exit" },
 
     { { NULL, 0, NULL, 0 }, NULL, NULL },
 };
+// clang-format on
 
 static size_t optCount = ARRAY_COUNT(optInfo);
 static struct option longOptions[ARRAY_COUNT(optInfo)];
@@ -175,6 +179,9 @@ int main(int argc, char** argv) {
         }
 
         switch (opt) {
+            case 'o':
+                outputFile = fopen(optarg, "wb");
+                break;
 
             case 'h':
                 PrintHelp(optCount, optInfo);
@@ -186,7 +193,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    printf("Options processed\n");
+    // printf("Options processed\n");
 
     {
         int i;
@@ -194,10 +201,10 @@ int main(int argc, char** argv) {
         inputFilesCount = argc - optind;
         inputFiles = malloc(inputFilesCount * sizeof(FILE*));
         for (i = 0; i < inputFilesCount; i++) {
-            printf("Using input file %s\n", argv[optind + i]);
+            // printf("Using input file %s\n", argv[optind + i]);
             inputFiles[i] = fopen(argv[optind + i], "rb");
         }
-        printf("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s" ) );
+        // printf("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s" ) );
         
 
         // Fairy_PrintSymbolTable(inputFile);
@@ -211,7 +218,7 @@ int main(int argc, char** argv) {
         fprintf(outputFile, ".word _%sSegmentRoDataSize\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentBssSize\n", ovlName);
 
-        Fado_Relocs(inputFiles, inputFilesCount);
+        Fado_Relocs(outputFile, inputFiles, inputFilesCount);
 
         fprintf(outputFile, "%sOverlayInfoOffset\n", ovlName);
 
@@ -226,6 +233,9 @@ int main(int argc, char** argv) {
             fclose(inputFiles[i]);
         }
         free(inputFiles);
+        if (outputFile != stdout) {
+            fclose(outputFile);
+        }
     }
 
     return EXIT_SUCCESS;

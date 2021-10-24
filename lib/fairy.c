@@ -10,7 +10,7 @@
 
 #include "vc_vector/vc_vector.h"
 
-#include "fairy_data.c"
+#include "fairy_data.inc"
 
 // #if __BYTE_ORDER == __LITTLE_ENDIAN
 // #define MAGIC 'FLE\x7F'
@@ -227,13 +227,13 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += currentSection.sh_size;
-                        printf("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
+                        // printf("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += currentSection.sh_size;
-                        printf("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
+                        // printf("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
                     } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { // May be several
                         fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += currentSection.sh_size;
-                        printf("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
+                        // printf("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
                     }
                     break;
 
@@ -262,13 +262,13 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                         if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
                             relocSection = FAIRY_SECTION_TEXT;
-                            printf("Found rel.text section\n");
+                            // printf("Found rel.text section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "data") == 0) {
                             relocSection = FAIRY_SECTION_DATA;
-                            printf("Found rel.data section\n");
+                            // printf("Found rel.data section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "rodata") == 0) {
                             relocSection = FAIRY_SECTION_RODATA;
-                            printf("Found rel.rodata section\n");
+                            // printf("Found rel.rodata section\n");
                         } else {
                             break;
                         }
