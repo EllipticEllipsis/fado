@@ -41,13 +41,15 @@ char* GetOverlayNameFromFilename(const char* src) {
     return ret;
 }
 
-#define OPTSTR "o:h"
+#define OPTSTR "o:vhV"
 
 // clang-format off
 static const OptInfo optInfo[] = {
     { { "output-file", required_argument, NULL, 'o' }, "FILE", "select output file. Will use stdout if none is specified" },
+    { { "verbosity", no_argument, NULL, 'v' }, NULL, "Verbosity level" },
 
     { { "help", no_argument, NULL, 'h' }, NULL, "Display this message and exit" },
+    { { "version", no_argument, NULL, 'V' }, NULL, "Display version information" },
 
     { { NULL, 0, NULL, 0 }, NULL, NULL },
 };
@@ -65,6 +67,7 @@ void ConstructLongOpts() {
 }
 
 int main(int argc, char** argv) {
+    int verbosityLevel = VERBOSITY_NONE;
     int opt;
     int inputFilesCount;
     FILE** inputFiles;
@@ -89,8 +92,18 @@ int main(int argc, char** argv) {
                 outputFile = fopen(optarg, "wb");
                 break;
 
+            case 'v':
+                if (sscanf(optarg, "%d", verbosityLevel) == 0) {
+                    fprintf(stderr, "warning: verbosity argument '%s' should be a nonnegative decimal integer", optarg);
+                }
+                break;
+
             case 'h':
                 PrintHelp(optCount, optInfo);
+                return EXIT_FAILURE;
+
+            case 'V':
+                PrintVersion();
                 return EXIT_FAILURE;
 
             default:
@@ -105,6 +118,11 @@ int main(int argc, char** argv) {
         int i;
 
         inputFilesCount = argc - optind;
+        if (inputFilesCount == 0) {
+            fprintf(stderr, "No input files specified. Exiting.");
+            return EXIT_FAILURE;
+        }
+
         inputFiles = malloc(inputFilesCount * sizeof(FILE*));
         for (i = 0; i < inputFilesCount; i++) {
             // printf("Using input file %s\n", argv[optind + i]);
