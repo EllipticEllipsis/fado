@@ -12,12 +12,6 @@
 
 #include "fairy_data.inc"
 
-// #if __BYTE_ORDER == __LITTLE_ENDIAN
-// #define MAGIC 'FLE\x7F'
-// #else
-// #define MAGIC '\x7FELF'
-// #endif
-
 /* Endian readers. MIPS is BE, so only need these */
 static Elf32_Half Fairy_ReadHalf(const uint8_t* data) {
     return data[0] << 8 | data[1] << 0;
@@ -410,18 +404,6 @@ void Fairy_PrintSymbolTable(FILE* inputFile) {
         free(strtab);
     }
 }
-
-// typedef struct {
-//     int define;
-//     const char *string;
-// } FairyRelocType;
-
-// #define FAIRY_RELOC_TYPE(x) \
-//     { x, #x }
-
-// static const FairyRelocType relocTypes[] = {
-//     FAIRY_RELOC_TYPE(R_MIPS_NONE),
-// };
 
 void Fairy_PrintRelocs(FILE* inputFile) {
     FairyFileHeader fileHeader;
@@ -817,7 +799,6 @@ typedef enum {
     REL_SECTION_TEXT,
     REL_SECTION_DATA,
     REL_SECTION_RODATA
-    // ,REL_SECTION_BSS
 } FairyOverlayRelSection;
 
 const char* relSectionStrings[] = {

@@ -10,17 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fairy.h"
+#include "macros.h"
 #include "vc_vector/vc_vector.h"
-
-#define VC_FOREACH(i, v) for (i = vc_vector_begin(v); i != vc_vector_end(v); i = vc_vector_next(v, i))
 
 /* String-finding-related functions */
 
 bool Fado_CheckInProgBitsSections(Elf32_Section section, vc_vector* progBitsSections) {
-    uint16_t* i;
-
-    // for (i = vc_vector_begin(progBitsSections); i != vc_vector_end(progBitsSections);
-    //      i = vc_vector_next(progBitsSections, i)) {
+    Elf32_Section* i;
     VC_FOREACH(i, progBitsSections) {
         if (*i == section) {
             return true;
@@ -36,13 +32,14 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
     for (currentFile = 0; currentFile < numFiles; currentFile++) {
         FairySym* symtab = fileInfo[currentFile].symtabInfo.sectionData;
 
-        stringVectors[currentFile] = vc_vector_create(0x10, sizeof(char**), NULL);
+        stringVectors[currentFile] = vc_vector_create(0x40, sizeof(char**), NULL);
 
         /* Build array of pointers to defined symbols' names */
         for (currentSym = 0; currentSym < fileInfo[currentFile].symtabInfo.sectionSize / sizeof(FairySym);
              currentSym++) {
             if ((symtab[currentSym].st_shndx != STN_UNDEF) &&
                 Fado_CheckInProgBitsSections(symtab[currentSym].st_shndx, fileInfo[currentFile].progBitsSections)) {
+                    /* Have to pass a double pointer so it copies the pointer instead of the start of the string */
                 char* stringPtr = &fileInfo[currentFile].strtab[symtab[currentSym].st_name];
                 assert(vc_vector_push_back(stringVectors[currentFile], &stringPtr));
             }
@@ -58,10 +55,6 @@ bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, vc_vector**
         if (currentFile == thisFile) {
             continue;
         }
-
-        // for (currentString = vc_vector_begin(stringVectors[currentFile]);
-        //      currentString != vc_vector_end(stringVectors[currentFile]);
-        //      currentString = vc_vector_next(stringVectors[currentFile], currentString)) {
         VC_FOREACH(currentString, stringVectors[currentFile]) {
             if (strcmp(name, *currentString) == 0) {
                 // printf("Match found for %s\n", name);
@@ -83,14 +76,16 @@ void Fado_DestroyStringVectors(vc_vector** stringVectors, int numFiles) {
 
 typedef struct {
     size_t symbolIndex;
+    int file;
     uint32_t relocWord;
 } FadoRelocInfo;
 
-FadoRelocInfo Fado_MakeReloc(FairySection section, FairyRel* data) {
+FadoRelocInfo Fado_MakeReloc(int file, FairySection section, FairyRel* data) {
     FadoRelocInfo relocInfo = { 0 };
     uint32_t sectionPrefix = 0;
 
     relocInfo.symbolIndex = ELF32_R_SYM(data->r_info);
+    relocInfo.file = file;
 
     switch (section) {
         case FAIRY_SECTION_TEXT:
@@ -116,65 +111,66 @@ FadoRelocInfo Fado_MakeReloc(FairySection section, FairyRel* data) {
 }
 
 static const FairyDefineString relSectionNames[] = {
-    FAIRY_DEF_STRING(FAIRY_SECTION, TEXT),
-    FAIRY_DEF_STRING(FAIRY_SECTION, DATA),
-    FAIRY_DEF_STRING(FAIRY_SECTION, RODATA),
+    FAIRY_DEF_STRING(FAIRY_SECTION_, TEXT),
+    FAIRY_DEF_STRING(FAIRY_SECTION_, DATA),
+    FAIRY_DEF_STRING(FAIRY_SECTION_, RODATA),
     { 0 },
 };
 
+/* Taken from elf.h */
 static const FairyDefineString relTypeNames[] = {
-    FAIRY_DEF_STRING(R, MIPS_NONE),    /* No reloc */
-    FAIRY_DEF_STRING(R, MIPS_16),      /* Direct 16 bit */
-    FAIRY_DEF_STRING(R, MIPS_32),      /* Direct 32 bit */
-    FAIRY_DEF_STRING(R, MIPS_REL32),   /* PC relative 32 bit */
-    FAIRY_DEF_STRING(R, MIPS_26),      /* Direct 26 bit shifted */
-    FAIRY_DEF_STRING(R, MIPS_HI16),    /* High 16 bit */
-    FAIRY_DEF_STRING(R, MIPS_LO16),    /* Low 16 bit */
-    FAIRY_DEF_STRING(R, MIPS_GPREL16), /* GP relative 16 bit */
-    FAIRY_DEF_STRING(R, MIPS_LITERAL), /* 16 bit literal entry */
-    FAIRY_DEF_STRING(R, MIPS_GOT16),   /* 16 bit GOT entry */
-    FAIRY_DEF_STRING(R, MIPS_PC16),    /* PC relative 16 bit */
-    FAIRY_DEF_STRING(R, MIPS_CALL16),  /* 16 bit GOT entry for function */
-    FAIRY_DEF_STRING(R, MIPS_GPREL32), /* GP relative 32 bit */
-    FAIRY_DEF_STRING(R, MIPS_SHIFT5),
-    FAIRY_DEF_STRING(R, MIPS_SHIFT6),
-    FAIRY_DEF_STRING(R, MIPS_64),
-    FAIRY_DEF_STRING(R, MIPS_GOT_DISP),
-    FAIRY_DEF_STRING(R, MIPS_GOT_PAGE),
-    FAIRY_DEF_STRING(R, MIPS_GOT_OFST),
-    FAIRY_DEF_STRING(R, MIPS_GOT_HI16),
-    FAIRY_DEF_STRING(R, MIPS_GOT_LO16),
-    FAIRY_DEF_STRING(R, MIPS_SUB),
-    FAIRY_DEF_STRING(R, MIPS_INSERT_A),
-    FAIRY_DEF_STRING(R, MIPS_INSERT_B),
-    FAIRY_DEF_STRING(R, MIPS_DELETE),
-    FAIRY_DEF_STRING(R, MIPS_HIGHER),
-    FAIRY_DEF_STRING(R, MIPS_HIGHEST),
-    FAIRY_DEF_STRING(R, MIPS_CALL_HI16),
-    FAIRY_DEF_STRING(R, MIPS_CALL_LO16),
-    FAIRY_DEF_STRING(R, MIPS_SCN_DISP),
-    FAIRY_DEF_STRING(R, MIPS_REL16),
-    FAIRY_DEF_STRING(R, MIPS_ADD_IMMEDIATE),
-    FAIRY_DEF_STRING(R, MIPS_PJUMP),
-    FAIRY_DEF_STRING(R, MIPS_RELGOT),
-    FAIRY_DEF_STRING(R, MIPS_JALR),
-    FAIRY_DEF_STRING(R, MIPS_TLS_DTPMOD32),    /* Module number 32 bit */
-    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL32),    /* Module-relative offset 32 bit */
-    FAIRY_DEF_STRING(R, MIPS_TLS_DTPMOD64),    /* Module number 64 bit */
-    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL64),    /* Module-relative offset 64 bit */
-    FAIRY_DEF_STRING(R, MIPS_TLS_GD),          /* 16 bit GOT offset for GD */
-    FAIRY_DEF_STRING(R, MIPS_TLS_LDM),         /* 16 bit GOT offset for LDM */
-    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL_HI16), /* Module-relative offset, high 16 bits */
-    FAIRY_DEF_STRING(R, MIPS_TLS_DTPREL_LO16), /* Module-relative offset, low 16 bits */
-    FAIRY_DEF_STRING(R, MIPS_TLS_GOTTPREL),    /* 16 bit GOT offset for IE */
-    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL32),     /* TP-relative offset, 32 bit */
-    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL64),     /* TP-relative offset, 64 bit */
-    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL_HI16),  /* TP-relative offset, high 16 bits */
-    FAIRY_DEF_STRING(R, MIPS_TLS_TPREL_LO16),  /* TP-relative offset, low 16 bits */
-    FAIRY_DEF_STRING(R, MIPS_GLOB_DAT),
-    FAIRY_DEF_STRING(R, MIPS_COPY),
-    FAIRY_DEF_STRING(R, MIPS_JUMP_SLOT),
-    FAIRY_DEF_STRING(R, MIPS_NUM),
+    FAIRY_DEF_STRING(, R_MIPS_NONE),    /* No reloc */
+    FAIRY_DEF_STRING(, R_MIPS_16),      /* Direct 16 bit */
+    FAIRY_DEF_STRING(, R_MIPS_32),      /* Direct 32 bit */
+    FAIRY_DEF_STRING(, R_MIPS_REL32),   /* PC relative 32 bit */
+    FAIRY_DEF_STRING(, R_MIPS_26),      /* Direct 26 bit shifted */
+    FAIRY_DEF_STRING(, R_MIPS_HI16),    /* High 16 bit */
+    FAIRY_DEF_STRING(, R_MIPS_LO16),    /* Low 16 bit */
+    FAIRY_DEF_STRING(, R_MIPS_GPREL16), /* GP relative 16 bit */
+    FAIRY_DEF_STRING(, R_MIPS_LITERAL), /* 16 bit literal entry */
+    FAIRY_DEF_STRING(, R_MIPS_GOT16),   /* 16 bit GOT entry */
+    FAIRY_DEF_STRING(, R_MIPS_PC16),    /* PC relative 16 bit */
+    FAIRY_DEF_STRING(, R_MIPS_CALL16),  /* 16 bit GOT entry for function */
+    FAIRY_DEF_STRING(, R_MIPS_GPREL32), /* GP relative 32 bit */
+    FAIRY_DEF_STRING(, R_MIPS_SHIFT5),
+    FAIRY_DEF_STRING(, R_MIPS_SHIFT6),
+    FAIRY_DEF_STRING(, R_MIPS_64),
+    FAIRY_DEF_STRING(, R_MIPS_GOT_DISP),
+    FAIRY_DEF_STRING(, R_MIPS_GOT_PAGE),
+    FAIRY_DEF_STRING(, R_MIPS_GOT_OFST),
+    FAIRY_DEF_STRING(, R_MIPS_GOT_HI16),
+    FAIRY_DEF_STRING(, R_MIPS_GOT_LO16),
+    FAIRY_DEF_STRING(, R_MIPS_SUB),
+    FAIRY_DEF_STRING(, R_MIPS_INSERT_A),
+    FAIRY_DEF_STRING(, R_MIPS_INSERT_B),
+    FAIRY_DEF_STRING(, R_MIPS_DELETE),
+    FAIRY_DEF_STRING(, R_MIPS_HIGHER),
+    FAIRY_DEF_STRING(, R_MIPS_HIGHEST),
+    FAIRY_DEF_STRING(, R_MIPS_CALL_HI16),
+    FAIRY_DEF_STRING(, R_MIPS_CALL_LO16),
+    FAIRY_DEF_STRING(, R_MIPS_SCN_DISP),
+    FAIRY_DEF_STRING(, R_MIPS_REL16),
+    FAIRY_DEF_STRING(, R_MIPS_ADD_IMMEDIATE),
+    FAIRY_DEF_STRING(, R_MIPS_PJUMP),
+    FAIRY_DEF_STRING(, R_MIPS_RELGOT),
+    FAIRY_DEF_STRING(, R_MIPS_JALR),
+    FAIRY_DEF_STRING(, R_MIPS_TLS_DTPMOD32),    /* Module number 32 bit */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_DTPREL32),    /* Module-relative offset 32 bit */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_DTPMOD64),    /* Module number 64 bit */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_DTPREL64),    /* Module-relative offset 64 bit */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_GD),          /* 16 bit GOT offset for GD */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_LDM),         /* 16 bit GOT offset for LDM */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_DTPREL_HI16), /* Module-relative offset, high 16 bits */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_DTPREL_LO16), /* Module-relative offset, low 16 bits */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_GOTTPREL),    /* 16 bit GOT offset for IE */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_TPREL32),     /* TP-relative offset, 32 bit */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_TPREL64),     /* TP-relative offset, 64 bit */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_TPREL_HI16),  /* TP-relative offset, high 16 bits */
+    FAIRY_DEF_STRING(, R_MIPS_TLS_TPREL_LO16),  /* TP-relative offset, low 16 bits */
+    FAIRY_DEF_STRING(, R_MIPS_GLOB_DAT),
+    FAIRY_DEF_STRING(, R_MIPS_COPY),
+    FAIRY_DEF_STRING(, R_MIPS_JUMP_SLOT),
+    FAIRY_DEF_STRING(, R_MIPS_NUM),
 };
 
 void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
@@ -196,8 +192,6 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
 
     /* Total number of relocs */
     uint32_t relocCount = 0;
-    /* 0,1,2 to make the section a whole qword */
-    uint8_t padCount;
 
     /* iterators */
     int currentFile;
@@ -217,19 +211,16 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
 
     /* Construct relocList of all relevant relocs */
     for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
-        relocList[section] = vc_vector_create(0x20, sizeof(FadoRelocInfo), NULL);
+        relocList[section] = vc_vector_create(0x100, sizeof(FadoRelocInfo), NULL);
 
         for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
             FairyRel* relSection = fileInfos[currentFile].relocTablesInfo[section].sectionData;
             if (relSection != NULL) {
-                // relocList[section] =
-                //     malloc(fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel) *
-                //     sizeof(FadoRelocInfo));
 
                 for (relocIndex = 0;
                      relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
                      relocIndex++) {
-                    FadoRelocInfo currentReloc = Fado_MakeReloc(section, &relSection[relocIndex]);
+                    FadoRelocInfo currentReloc = Fado_MakeReloc(currentFile, section, &relSection[relocIndex]);
 
                     if ((symtabs[currentFile][currentReloc.symbolIndex].st_shndx != STN_UNDEF) ||
                         Fado_FindSymbolNameInOtherFiles(
@@ -252,7 +243,8 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
     }
 
     {
-        // char overlayName[] = "ovl_Name_Goes_Here";
+        /* 0,1,2 to make the section a whole qword */
+        uint8_t padCount;
         // printf(".section .ovl\n# %sOverlayInfo\n", overlayName);
         // printf(".word _%sSegmentTextSize\n", overlayName);
         // printf(".word _%sSegmentDataSize\n", overlayName);
@@ -263,12 +255,6 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
         padCount = -(relocCount + 2) & 3;
 
         for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
-            // FairyRel* relSection = fileInfos[0].relocTablesInfo[section].sectionData;
-
-            // if (relSection == NULL) {
-            //     // printf("Ignoring empty reloc section\n");
-            //     continue;
-            // }
             if (vc_vector_count(relocList[section]) == 0) {
                 // printf("Ignoring empty reloc section\n");
                 continue;
@@ -276,19 +262,16 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
 
             fprintf(outputFile, "\n# %s RELOCS\n", Fairy_StringFromDefine(relSectionNames, section));
 
-            // for (relocIndex = 0; relocIndex < fileInfos[0].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
-            //      relocIndex++)
-            FadoRelocInfo* currentReloc;
-            VC_FOREACH(currentReloc, relocList[section]) {
-                // FadoRelocInfo* currentReloc = reloc;//vc_vector_at(relocList[section], relocIndex);
-
-                // if (symtabs[0][currentReloc->symbolIndex].st_shndx != STN_UNDEF) {
-                fprintf(outputFile, ".word 0x%X # %-6s %-10s 0x%06X \n", currentReloc->relocWord,
-                           relSectionNames[section].string,
-                           Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
-                           currentReloc->relocWord & 0xFFFFFF
-/*                           , &fileInfos[0].strtab[symtabs[0][currentReloc->symbolIndex].st_name] */);
-                // }
+            {
+                FadoRelocInfo* currentReloc;
+                VC_FOREACH(currentReloc, relocList[section]) {
+                    fprintf(outputFile, ".word 0x%X # %-11s 0x%06X %s\n", currentReloc->relocWord,
+                            /* relSectionNames[section].string, */
+                            Fairy_StringFromDefine(relTypeNames, (currentReloc->relocWord >> 0x18) & 0x3F),
+                            currentReloc->relocWord & 0xFFFFFF,
+                            Fairy_GetSymbolName(symtabs[currentReloc->file], fileInfos[currentReloc->file].strtab,
+                                                currentReloc->symbolIndex));
+                }
             }
         }
         /* print pads and section size */
@@ -298,7 +281,6 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
         fprintf(outputFile, "\n.word 0x%08X # ", 4 * (relocCount + 1));
     }
 
-    // printf("\nFinish writing variables\n");
     for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
         // printf("Freeing file %d\n", currentFile);
         Fairy_DestroyFile(&fileInfos[currentFile]);
@@ -312,9 +294,6 @@ void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount) {
         // printf("Freed relocList[%d]\n", section);
     }
 
-    // puts("1");
-    // puts("2");
-    // puts("3");
     // printf("Freeing string vectors\n");
     Fado_DestroyStringVectors(stringVectors, inputFilesCount);
     // printf("Freed string vectors\n");

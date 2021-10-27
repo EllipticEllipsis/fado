@@ -7,7 +7,7 @@
 #include "vc_vector/vc_vector.h"
 
 #define FAIRY_DEF_STRING(prefix, x) \
-    { prefix##_##x, #x }
+    { prefix##x, #x }
 
 
 typedef Elf32_Ehdr FairyFileHeader;
@@ -46,6 +46,8 @@ FairyFileHeader* Fairy_ReadFileHeader(FairyFileHeader* header, FILE* file);
 FairySecHeader* Fairy_ReadSectionTable(FairySecHeader* sectionTable, FILE* file, size_t tableOffset, size_t number);
 char* Fairy_ReadStringTable(char* stringTable, FILE* file, size_t tableOffset, size_t tableSize);
 FairyRel* Fairy_ReadRelocs(FairyRel* relocTable, FILE* file, size_t offset, size_t number);
+
+char* Fairy_GetSymbolName(FairySym* symtab, char* strtab, size_t index);
 
 void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file);
 void Fairy_DestroyFile(FairyFileInfo* fileInfo);

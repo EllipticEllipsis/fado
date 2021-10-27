@@ -4,113 +4,19 @@
 #include <string.h>
 #include <getopt.h>
 
-// #include <stdint.h>
-// #include <string.h>
-// #include <inttypes.h>
-
 #include "macros.h"
 #include "help.h"
-
 #include "fairy.h"
 #include "fado.h"
-#include "hestu/hestu.h"
+#include "vc_vector/vc_vector.h"
 
 #if defined _WIN32 || defined __CYGWIN__
 #define PATH_SEPARATOR '\\'
 #else
 #define PATH_SEPARATOR '/'
 #endif
-/* (Bad) filename-parsing idea to get the overlay name from the filename. ovlName must be freed separately. */
-// char* GetOverlayNameFromFilename(char* ovlName, const char* src) {
-//     size_t ind;
-//     size_t start = 0;
-//     size_t end = 0;
 
-//     for (ind = strlen(src); ind != 0; ind--) {
-//         if (src[ind] == PATH_SEPARATOR) {
-//             if (end != 0) {
-//                 start = ind + 1;
-//                 break;
-//             }
-//             end = ind;
-//         }
-//     }
-//     if (end == 0) {
-//         return NULL;
-//     }
-
-//     ovlName = malloc((end - start + 1) * sizeof(char));
-//     memcpy(ovlName, src + start, end - start);
-//     ovlName[end - start + 1] = '\0';
-
-//     return ovlName;
-// }
-#include <vc_vector/vc_vector.h>
-
-// void Test_vc_vector() {
-//     vc_vector* v = vc_vector_create(0, sizeof(int), NULL);
-
-//     {
-//         size_t i;
-//         int x = 1;
-//         for (i = 0; i < 10; i++) {
-//             x *= i + 1;
-//             vc_vector_push_back(v, &x);
-//         }
-//         for (i = 0; i < vc_vector_count(v); i++) {
-//             int* temp = vc_vector_at(v, i);
-//             printf("%d\n", *temp);
-//         }
-//     }
-
-//     vc_vector_release(v);
-// }
-
-// void Test() {
-//     int* array = NULL;
-//     array = HESTU_INIT(array, 4);
-
-//     HESTU_ADDITEM(array, 1);
-//     HESTU_ADDITEM(array, 2);
-//     HESTU_ADDITEM(array, 3);
-//     HESTU_ADDITEM(array, 18);
-//     HESTU_ADDITEM(array, 36);
-
-//     {
-//         size_t i;
-//         for (i = 0; i < HESTU_HEADER(array)->count; i++) {
-//             printf("%d, ", array[i]);
-//         }
-//         putchar('\n');
-//     }
-//     printf("Freeing array\n");
-//     HESTU_DESTROY(array);
-//     printf("Array freed\n");
-// }
-
-// TYPEDEF_DYNAMIC_ARRAY(int)
-
-// void Test_Template() {
-//     DYNAMIC_ARRAY(int) dynArray;
-
-//     intArray_Init(&dynArray);
-
-//     intArray_AddItem(&dynArray, 1);
-//     intArray_AddItem(&dynArray, 2);
-//     intArray_AddItem(&dynArray, 3);
-//     intArray_AddItem(&dynArray, 18);
-//     intArray_AddItem(&dynArray, 36);
-
-//     {
-//         size_t i;
-//         for (i = 0; i < dynArray.count; i++) {
-//             printf("%d, ", dynArray.array[i]);
-//         }
-//         putchar('\n');
-//     }
-//     intArray_Destroy(&dynArray);
-// }
-
+/* (Bad) filename-parsing idea to get the overlay name from the filename. output must be freed separately. */
 char* GetOverlayNameFromFilename(const char* src) {
     char* ret;
     const char* ptr;
@@ -205,14 +111,10 @@ int main(int argc, char** argv) {
             inputFiles[i] = fopen(argv[optind + i], "rb");
         }
         // printf("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s" ) );
-        
-
-        // Fairy_PrintSymbolTable(inputFile);
-        // PrintZeldaReloc(inputFile);
 
         char* ovlName = GetOverlayNameFromFilename(argv[optind]);
         fprintf(outputFile, ".section .ovl\n");
-        fprintf(outputFile, "# _%sOverlayInfo\n", ovlName);
+        fprintf(outputFile, "# %sOverlayInfo\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentTextSize\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentDataSize\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentRoDataSize\n", ovlName);
@@ -224,11 +126,6 @@ int main(int argc, char** argv) {
 
         free(ovlName);
 
-        // Fairy_PrintRelocs(inputFile);
-
-        // Test_vc_vector();
-        // Test();
-        // Test_Template();
         for (i = 0; i < inputFilesCount; i++) {
             fclose(inputFiles[i]);
         }
