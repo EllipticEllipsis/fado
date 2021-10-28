@@ -12,8 +12,8 @@
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 #define CLAMP_MAX(x, max) ((x) > (max) ? (max) : (x))
 #define CLAMP_MIN(x, min) ((x) < (min) ? (min) : (x))
-#define MEDIAN3(a1, a2, a3) ((a2 >= a1) ? ((a3 >= a2) ? a2 : ((a1 >= a3) ? a1 : a3)) : ((a2 >= a3) ? a2 : ((a3 >= a1) ? a1 : a3)))
+#define MEDIAN3(a1, a2, a3) \
+    ((a2 >= a1) ? ((a3 >= a2) ? a2 : ((a1 >= a3) ? a1 : a3)) : ((a2 >= a3) ? a2 : ((a3 >= a1) ? a1 : a3)))
 
 /* vc_vector macros - really these should go in vc_vector.h, but not much choice without touching the library files */
 #define VC_FOREACH(i, v) for (i = vc_vector_begin(v); i != vc_vector_end(v); i = vc_vector_next(v, i))
-

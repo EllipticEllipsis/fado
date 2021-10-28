@@ -9,7 +9,6 @@
 #define FAIRY_DEF_STRING(prefix, x) \
     { prefix##x, #x }
 
-
 typedef Elf32_Ehdr FairyFileHeader;
 typedef Elf32_Shdr FairySecHeader;
 typedef Elf32_Sym FairySym;
@@ -39,7 +38,6 @@ typedef enum {
     FAIRY_SECTION_RODATA,
     FAIRY_SECTION_OTHER //,
 } FairySection;
-
 
 const char* Fairy_StringFromDefine(const FairyDefineString* dict, int define);
 bool Fairy_StartsWith(const char* string, const char* initial);

@@ -53,7 +53,8 @@ char* GetOverlayNameFromFilename(const char* src) {
 #define OPTSTR "o:v:hV"
 #define USAGE_STRING "Usage: %s [-hV] [-o output_file] [-v level] input_files ...\n"
 
-#define HELP_PROLOGUE "Extract relocations from object files and convert them into the format required by Zelda 64 overlays.\n"
+#define HELP_PROLOGUE \
+    "Extract relocations from object files and convert them into the format required by Zelda 64 overlays.\n"
 #define HELP_EPILOGUE repo
 
 // clang-format off

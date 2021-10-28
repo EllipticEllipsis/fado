@@ -5,7 +5,7 @@
 typedef enum {
     VERBOSITY_NONE,
     VERBOSITY_INFO,
-    VERBOSITY_DEBUG
+    VERBOSITY_DEBUG //,
 } VerbosityLevel;
 
 void Fado_Relocs(FILE* outputFile, FILE** inputFiles, int inputFilesCount);

@@ -39,7 +39,7 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
              currentSym++) {
             if ((symtab[currentSym].st_shndx != STN_UNDEF) &&
                 Fado_CheckInProgBitsSections(symtab[currentSym].st_shndx, fileInfo[currentFile].progBitsSections)) {
-                    /* Have to pass a double pointer so it copies the pointer instead of the start of the string */
+                /* Have to pass a double pointer so it copies the pointer instead of the start of the string */
                 char* stringPtr = &fileInfo[currentFile].strtab[symtab[currentSym].st_name];
                 assert(vc_vector_push_back(stringVectors[currentFile], &stringPtr));
             }
