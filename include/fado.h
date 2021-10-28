@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdio.h>
-// #include "fairy.h"
 
 typedef enum {
     VERBOSITY_NONE,

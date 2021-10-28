@@ -10,6 +10,15 @@
 #include "fado.h"
 #include "vc_vector/vc_vector.h"
 
+#include "version.inc"
+
+void PrintVersion() {
+    printf("Fado (Fairy-Assisted relocations for Decompiled Overlays), version %s\n", versionNumber);
+    printf("Copyright (C) 2021 Elliptic Ellipsis\n");
+    printf("%s\n", credits);
+    printf("Repository available at %s.\n", repo);
+}
+
 #if defined _WIN32 || defined __CYGWIN__
 #define PATH_SEPARATOR '\\'
 #else
@@ -41,12 +50,16 @@ char* GetOverlayNameFromFilename(const char* src) {
     return ret;
 }
 
-#define OPTSTR "o:vhV"
+#define OPTSTR "o:v:hV"
+#define USAGE_STRING "Usage: %s [-hV] [-o output_file] [-v level] input_files ...\n"
+
+#define HELP_PROLOGUE "Extract relocations from object files and convert them into the format required by Zelda 64 overlays.\n"
+#define HELP_EPILOGUE repo
 
 // clang-format off
 static const OptInfo optInfo[] = {
-    { { "output-file", required_argument, NULL, 'o' }, "FILE", "select output file. Will use stdout if none is specified" },
-    { { "verbosity", no_argument, NULL, 'v' }, NULL, "Verbosity level" },
+    { { "output-file", required_argument, NULL, 'o' }, "FILE", "Output to FILE. Will use stdout if none is specified" },
+    { { "verbosity", required_argument, NULL, 'v' }, "N", "Verbosity level, one of 0 (None, default), 1 (Info), 2 (Debug)" },
 
     { { "help", no_argument, NULL, 'h' }, NULL, "Display this message and exit" },
     { { "version", no_argument, NULL, 'V' }, NULL, "Display version information" },
@@ -76,6 +89,7 @@ int main(int argc, char** argv) {
     ConstructLongOpts();
 
     if (argc < 2) {
+        printf(USAGE_STRING, argv[0]);
         fprintf(stderr, "No input file specified\n");
         return EXIT_FAILURE;
     }
@@ -93,13 +107,14 @@ int main(int argc, char** argv) {
                 break;
 
             case 'v':
-                if (sscanf(optarg, "%d", verbosityLevel) == 0) {
+                if (sscanf(optarg, "%d", &verbosityLevel) == 0) {
                     fprintf(stderr, "warning: verbosity argument '%s' should be a nonnegative decimal integer", optarg);
                 }
                 break;
 
             case 'h':
-                PrintHelp(optCount, optInfo);
+                printf(USAGE_STRING, argv[0]);
+                PrintHelp(HELP_PROLOGUE, optCount, optInfo, HELP_EPILOGUE);
                 return EXIT_FAILURE;
 
             case 'V':
@@ -107,7 +122,7 @@ int main(int argc, char** argv) {
                 return EXIT_FAILURE;
 
             default:
-                printf("?? getopt returned character code 0%o ??\n", opt);
+                fprintf(stderr, "?? getopt returned character code 0x%X ??\n", opt);
                 break;
         }
     }
@@ -119,7 +134,7 @@ int main(int argc, char** argv) {
 
         inputFilesCount = argc - optind;
         if (inputFilesCount == 0) {
-            fprintf(stderr, "No input files specified. Exiting.");
+            fprintf(stderr, "No input files specified. Exiting.\n");
             return EXIT_FAILURE;
         }
 

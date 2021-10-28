@@ -77,17 +77,15 @@ void PrintFlowAndIndent(const char* string, size_t initialColumn, size_t textWid
     }
 }
 
-void PrintHelp(size_t optCount, const OptInfo* optInfo) {
+void PrintHelp(const char* prologue, size_t optCount, const OptInfo* optInfo, const char* epilogue) {
     size_t textWidth = 80;
     size_t dtIndent = 2;
     size_t ddIndent = 25;
     size_t i;
     size_t dtLength;
     int padding;
-    static char prolog[] = "Help prolog";
-    static char epilog[] = "Pithy closing remark";
 
-    printf("%s", prolog);
+    PrintFlowAndIndent(prologue, 0, textWidth, 0, false);
     printf("\n");
 
     for (i = 0; i < optCount; i++) {
@@ -112,6 +110,6 @@ void PrintHelp(size_t optCount, const OptInfo* optInfo) {
     }
 
     printf("\n");
-    printf("%s", epilog);
+    PrintFlowAndIndent(epilogue, 0, textWidth, 0, false);
     printf("\n");
 }

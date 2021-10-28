@@ -9,4 +9,4 @@ typedef struct {
     char* helpMsg;
 } OptInfo;
 
-void PrintHelp(size_t optCount, const OptInfo* optInfo);
+void PrintHelp(const char* prologue, size_t optCount, const OptInfo* optInfo, const char* epilogue);
