@@ -1,5 +1,5 @@
 /**
- * Relocation reading part
+ * Code specific to reading and outputting Zelda 64 relocations
  */
 #include "fado.h"
 

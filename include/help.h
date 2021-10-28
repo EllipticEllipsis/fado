@@ -9,4 +9,14 @@ typedef struct {
     char* helpMsg;
 } OptInfo;
 
-void PrintHelp(const char* prologue, size_t optCount, const OptInfo* optInfo, const char* epilogue);
+typedef struct {
+    char* helpArg;
+    char* helpMsg;
+} PosArgInfo;
+
+/* Formatting sizes used by Help_PrintHelp. Change them before calling Help_PrintHelp to use custom values */
+extern size_t helpTextWidth;
+extern size_t helpDtIndent;
+extern size_t helpDdIndent;
+
+void Help_PrintHelp(const char* prologue, size_t posArgCount, const PosArgInfo* posArgInfo, size_t optCount, const OptInfo* optInfo, const char* epilogue);

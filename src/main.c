@@ -50,25 +50,32 @@ char* GetOverlayNameFromFilename(const char* src) {
     return ret;
 }
 
-#define OPTSTR "o:v:hV"
-#define USAGE_STRING "Usage: %s [-hV] [-o output_file] [-v level] input_files ...\n"
+#define OPTSTR "n:o:v:hV"
+#define USAGE_STRING "Usage: %s [-hV] [-n name] [-o output_file] [-v level] input_files ...\n"
 
 #define HELP_PROLOGUE \
     "Extract relocations from object files and convert them into the format required by Zelda 64 overlays.\n"
 #define HELP_EPILOGUE repo
 
 // clang-format off
+static const PosArgInfo posArgInfo[] = {
+    { "INPUT_FILE", "Every positional argument is an input file, and there should be at least one input file. All inputs are relocatable .o (object) ELF files" },
+    { NULL, NULL }
+};
+
 static const OptInfo optInfo[] = {
+    { { "name", required_argument, NULL, 'n' }, "NAME", "Use NAME as the overlay name. Uses the deepest folder name in the input file's path if not specified" },
     { { "output-file", required_argument, NULL, 'o' }, "FILE", "Output to FILE. Will use stdout if none is specified" },
     { { "verbosity", required_argument, NULL, 'v' }, "N", "Verbosity level, one of 0 (None, default), 1 (Info), 2 (Debug)" },
 
     { { "help", no_argument, NULL, 'h' }, NULL, "Display this message and exit" },
     { { "version", no_argument, NULL, 'V' }, NULL, "Display version information" },
 
-    { { NULL, 0, NULL, 0 }, NULL, NULL },
+    { { NULL, 0, NULL, '\0' }, NULL, NULL },
 };
 // clang-format on
 
+static size_t posArgCount = ARRAY_COUNT(optInfo);
 static size_t optCount = ARRAY_COUNT(optInfo);
 static struct option longOptions[ARRAY_COUNT(optInfo)];
 
@@ -86,6 +93,7 @@ int main(int argc, char** argv) {
     int inputFilesCount;
     FILE** inputFiles;
     FILE* outputFile = stdout;
+    char* ovlName = NULL;
 
     ConstructLongOpts();
 
@@ -103,6 +111,10 @@ int main(int argc, char** argv) {
         }
 
         switch (opt) {
+            case 'n':
+                ovlName = optarg;
+                break;
+
             case 'o':
                 outputFile = fopen(optarg, "wb");
                 break;
@@ -115,7 +127,7 @@ int main(int argc, char** argv) {
 
             case 'h':
                 printf(USAGE_STRING, argv[0]);
-                PrintHelp(HELP_PROLOGUE, optCount, optInfo, HELP_EPILOGUE);
+                Help_PrintHelp(HELP_PROLOGUE, posArgCount, posArgInfo, optCount, optInfo, HELP_EPILOGUE);
                 return EXIT_FAILURE;
 
             case 'V':
@@ -145,8 +157,10 @@ int main(int argc, char** argv) {
             inputFiles[i] = fopen(argv[optind + i], "rb");
         }
         // printf("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s" ) );
+        if (ovlName == NULL) {
+            ovlName = GetOverlayNameFromFilename(argv[optind]);
+        }
 
-        char* ovlName = GetOverlayNameFromFilename(argv[optind]);
         fprintf(outputFile, ".section .ovl\n");
         fprintf(outputFile, "# %sOverlayInfo\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentTextSize\n", ovlName);
