@@ -161,16 +161,7 @@ int main(int argc, char** argv) {
             ovlName = GetOverlayNameFromFilename(argv[optind]);
         }
 
-        fprintf(outputFile, ".section .ovl\n");
-        fprintf(outputFile, "# %sOverlayInfo\n", ovlName);
-        fprintf(outputFile, ".word _%sSegmentTextSize\n", ovlName);
-        fprintf(outputFile, ".word _%sSegmentDataSize\n", ovlName);
-        fprintf(outputFile, ".word _%sSegmentRoDataSize\n", ovlName);
-        fprintf(outputFile, ".word _%sSegmentBssSize\n", ovlName);
-
-        Fado_Relocs(outputFile, inputFiles, inputFilesCount);
-
-        fprintf(outputFile, "%sOverlayInfoOffset\n", ovlName);
+        Fado_Relocs(outputFile, inputFilesCount, inputFiles, ovlName);
 
         free(ovlName);
 
