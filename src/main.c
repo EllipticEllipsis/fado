@@ -1,3 +1,5 @@
+/* Copyright (C) 2021 Elliptic Ellipsis */
+/* SPDX-License-Identifier: AGPL-3.0-only */
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

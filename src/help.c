@@ -1,6 +1,8 @@
 /**
  * Getopt-compatible printing of formatted help.
  */
+/* Copyright (C) 2021 Elliptic Ellipsis */
+/* SPDX-License-Identifier: AGPL-3.0-only */
 #include "help.h"
 
 #include <assert.h>

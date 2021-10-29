@@ -2,6 +2,8 @@
  * Functions for working with N64 ELF files.
  * For now relies on (GNU) elf.h, but may move away from this in future.
  */
+/* Copyright (C) 2021 Elliptic Ellipsis */
+/* SPDX-License-Identifier: AGPL-3.0-only */
 #include "fairy.h"
 
 #include <assert.h>

@@ -1,6 +1,8 @@
 /**
  * Functions for printing various sections of an N64 ELF file using the functions in Fairy, similarly to readelf
  */
+/* Copyright (C) 2021 Elliptic Ellipsis */
+/* SPDX-License-Identifier: AGPL-3.0-only */
 #include "fairy.h"
 
 #include <assert.h>
