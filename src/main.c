@@ -53,7 +53,8 @@ char* GetOverlayNameFromFilename(const char* src) {
 #define OPTSTR "n:o:v:hV"
 #define USAGE_STRING "Usage: %s [-hV] [-n name] [-o output_file] [-v level] input_files ...\n"
 
-#define HELP_PROLOGUE \
+#define HELP_PROLOGUE                                            \
+    "Fado (Fairy-Assisted relocations for Decompiled Overlays\n" \
     "Extract relocations from object files and convert them into the format required by Zelda 64 overlays.\n"
 #define HELP_EPILOGUE repo
 
@@ -88,7 +89,7 @@ void ConstructLongOpts() {
 }
 
 int main(int argc, char** argv) {
-    int verbosityLevel = VERBOSITY_NONE;
+    // int verbosityLevel = VERBOSITY_NONE;
     int opt;
     int inputFilesCount;
     FILE** inputFiles;
@@ -120,7 +121,7 @@ int main(int argc, char** argv) {
                 break;
 
             case 'v':
-                if (sscanf(optarg, "%d", &verbosityLevel) == 0) {
+                if (sscanf(optarg, "%d", &gVerbosity) == 0) {
                     fprintf(stderr, "warning: verbosity argument '%s' should be a nonnegative decimal integer", optarg);
                 }
                 break;
@@ -140,7 +141,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // printf("Options processed\n");
+    FAIRY_INFO_PRINTF("%s", "Options processed\n");
 
     {
         int i;
@@ -153,10 +154,12 @@ int main(int argc, char** argv) {
 
         inputFiles = malloc(inputFilesCount * sizeof(FILE*));
         for (i = 0; i < inputFilesCount; i++) {
-            // printf("Using input file %s\n", argv[optind + i]);
+            FAIRY_INFO_PRINTF("Using input file %s\n", argv[optind + i]);
             inputFiles[i] = fopen(argv[optind + i], "rb");
         }
-        // printf("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s" ) );
+
+        FAIRY_INFO_PRINTF("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s"));
+
         if (ovlName == NULL) {
             ovlName = GetOverlayNameFromFilename(argv[optind]);
         }

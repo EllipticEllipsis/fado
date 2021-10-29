@@ -25,6 +25,9 @@ bool Fado_CheckInProgBitsSections(Elf32_Section section, vc_vector* progBitsSect
     return false;
 }
 
+/**
+ * For each input file, construct a vector of pointers to the starts of the strings defined in that file.
+ */
 void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileInfo, int numFiles) {
     int currentFile;
     size_t currentSym;
@@ -34,7 +37,7 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
 
         stringVectors[currentFile] = vc_vector_create(0x40, sizeof(char**), NULL);
 
-        /* Build array of pointers to defined symbols' names */
+        /* Build a vector of pointers to defined symbols' names */
         for (currentSym = 0; currentSym < fileInfo[currentFile].symtabInfo.sectionSize / sizeof(FairySym);
              currentSym++) {
             if ((symtab[currentSym].st_shndx != STN_UNDEF) &&
@@ -57,12 +60,12 @@ bool Fado_FindSymbolNameInOtherFiles(const char* name, int thisFile, vc_vector**
         }
         VC_FOREACH(currentString, stringVectors[currentFile]) {
             if (strcmp(name, *currentString) == 0) {
-                // printf("Match found for %s\n", name);
+                FAIRY_DEBUG_PRINTF("Match found for %s\n", name);
                 return true;
             }
         }
     }
-    // printf("No match found for %s\n", name);
+    FAIRY_DEBUG_PRINTF("No match found for %s\n", name);
     return false;
 }
 
@@ -80,6 +83,7 @@ typedef struct {
     uint32_t relocWord;
 } FadoRelocInfo;
 
+/* Construct the Zelda64ovl-compatible reloc word from an ELF reloc */
 FadoRelocInfo Fado_MakeReloc(int file, FairySection section, FairyRel* data) {
     FadoRelocInfo relocInfo = { 0 };
     uint32_t sectionPrefix = 0;
@@ -173,6 +177,10 @@ static const FairyDefineString relTypeNames[] = {
     FAIRY_DEF_STRING(, R_MIPS_NUM),
 };
 
+/**
+ * Find all the necessary relocations to retain (those defined in any input file), and print them in the appropriate
+ * format.
+ */
 void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const char* ovlName) {
     /* General information structs */
     FairyFileInfo* fileInfos = malloc(inputFilesCount * sizeof(FairyFileInfo));
@@ -184,7 +192,7 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
     vc_vector** stringVectors = malloc(inputFilesCount * sizeof(vc_vector*));
 
     /* The relocs in the format we will print */
-    vc_vector* relocList[FAIRY_SECTION_OTHER]; // Maximum number of reloc sections
+    vc_vector* relocList[FAIRY_SECTION_OTHER]; /* Maximum number of reloc sections */
 
     /* Offset of current file's current section into the overlay's whole section */
     uint32_t sectionOffset[FAIRY_SECTION_OTHER] = { 0 };
@@ -197,16 +205,16 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
     FairySection section;
     size_t relocIndex;
 
-    // fileInfos = malloc(inputFilesCount * sizeof(FairyFileInfo));
-    // symtabs = malloc(inputFilesCount * sizeof(FairySym*));
     for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
+        FAIRY_INFO_PRINTF("Begin initialising file %d info.\n", currentFile);
         Fairy_InitFile(&fileInfos[currentFile], inputFiles[currentFile]);
+        FAIRY_INFO_PRINTF("Initialising file %d info complete.\n", currentFile);
+
         symtabs[currentFile] = fileInfos[currentFile].symtabInfo.sectionData;
     }
 
-    // stringVectors = malloc(inputFilesCount * sizeof(vc_vector*));
     Fado_ConstructStringVectors(stringVectors, fileInfos, inputFilesCount);
-    // printf("symtabs set\n");
+    FAIRY_INFO_PRINTF("%s", "symtabs set\n");
 
     /* Construct relocList of all relevant relocs */
     for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
@@ -227,17 +235,17 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
                             currentFile, stringVectors, inputFilesCount)) {
 
                         currentReloc.relocWord += sectionOffset[section];
-                        // printf("section offset: %d\n", sectionOffset[section]);
+                        FAIRY_DEBUG_PRINTF("current section offset: %d\n", sectionOffset[section]);
                         vc_vector_push_back(relocList[section], &currentReloc);
                         relocCount++;
                     }
                 }
             } else {
-                // printf("Ignoring empty reloc section\n");
+                FAIRY_INFO_PRINTF("%s", "Ignoring empty reloc section\n");
             }
 
             sectionOffset[section] += fileInfos[currentFile].progBitsSizes[section];
-            // printf("section offset: %d\n", sectionOffset[section]);
+            FAIRY_INFO_PRINTF("section offset: %d\n", sectionOffset[section]);
         }
     }
 
@@ -259,7 +267,7 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
         /* Write reloc table */
         for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
             if (vc_vector_count(relocList[section]) == 0) {
-                // printf("Ignoring empty reloc section\n");
+                FAIRY_INFO_PRINTF("%s", "Ignoring empty reloc section\n");
                 continue;
             }
 
@@ -285,23 +293,20 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
     }
 
     for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
-        // printf("Freeing file %d\n", currentFile);
         Fairy_DestroyFile(&fileInfos[currentFile]);
-        // printf("Freed file %d\n", currentFile);
+        FAIRY_INFO_PRINTF("Freed file %d\n", currentFile);
     }
 
     for (section = FAIRY_SECTION_TEXT; section < FAIRY_SECTION_OTHER; section++) {
         if (relocList[section] != NULL) {
             vc_vector_release(relocList[section]);
         }
-        // printf("Freed relocList[%d]\n", section);
+        FAIRY_INFO_PRINTF("Freed relocList[%d]\n", section);
     }
 
-    // printf("Freeing string vectors\n");
     Fado_DestroyStringVectors(stringVectors, inputFilesCount);
-    // printf("Freed string vectors\n");
-    // printf("Freeing symtabs\n");
+    FAIRY_INFO_PRINTF("%s", "Freed string vectors\n");
     free(symtabs);
-    // printf("Freed symtabs\n");
+    FAIRY_INFO_PRINTF("%s", "Freed symtabs\n");
     free(fileInfos);
 }

@@ -14,6 +14,25 @@
 
 #include "vc_vector/vc_vector.h"
 
+VerbosityLevel gVerbosity = VERBOSITY_NONE;
+
+int Fairy_DebugPrintf(const char* file, int line, const char* func,VerbosityLevel level, const char* fmt, ...) {
+    if (gVerbosity >= level) {
+        int ret = 0;
+        va_list args;
+        va_start(args, fmt);
+
+        if (gVerbosity >= VERBOSITY_DEBUG) {
+            ret += fprintf(stderr, "%s:%d:%s: ", file, line, func);
+        }
+
+        ret += vfprintf(stderr, fmt, args);
+        va_end(args);
+        return ret;
+    }
+    return 0;
+}
+
 /* Endian readers. MIPS is BE, so only need these */
 static Elf32_Half Fairy_ReadHalf(const uint8_t* data) {
     return data[0] << 8 | data[1] << 0;
@@ -193,7 +212,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
     FairySecHeader* sectionTable;
     char* shstrtab;
     int i;
-    
+
     assert(fileInfo != NULL);
     assert(file != NULL);
 
@@ -226,13 +245,13 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += currentSection.sh_size;
-                        // printf("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
+                        FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += currentSection.sh_size;
-                        // printf("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
-                    } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { // May be several
+                        FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
+                    } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
                         fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += currentSection.sh_size;
-                        // printf("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
+                        FAIRY_DEBUG_PRINTF("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
                     }
                     break;
 
@@ -247,7 +266,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                 case SHT_STRTAB:
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "strtab") == 0) {
-                        // printf("strtab found\n");
+                        FAIRY_DEBUG_PRINTF("%s", "strtab found\n");
                         fileInfo->strtab = malloc(currentSection.sh_size);
                         Fairy_ReadStringTable(fileInfo->strtab, file, currentSection.sh_offset, currentSection.sh_size);
                     }
@@ -261,13 +280,13 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                         if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
                             relocSection = FAIRY_SECTION_TEXT;
-                            // printf("Found rel.text section\n");
+                            FAIRY_DEBUG_PRINTF("%s", "Found rel.text section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "data") == 0) {
                             relocSection = FAIRY_SECTION_DATA;
-                            // printf("Found rel.data section\n");
+                            FAIRY_DEBUG_PRINTF("%s", "Found rel.data section\n");
                         } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "rodata") == 0) {
                             relocSection = FAIRY_SECTION_RODATA;
-                            // printf("Found rel.rodata section\n");
+                            FAIRY_DEBUG_PRINTF("%s", "Found rel.rodata section\n");
                         } else {
                             break;
                         }
@@ -287,23 +306,22 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
     free(sectionTable);
     free(shstrtab);
-    // printf("Init done.\n");
 }
 
 void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
     size_t i;
     for (i = 0; i < 3; i++) {
         if (fileInfo->relocTablesInfo[i].sectionData != NULL) {
-            // printf("Freeing reloc section %zd data\n", i);
+            FAIRY_DEBUG_PRINTF("Freeing reloc section %zd data\n", i);
             free(fileInfo->relocTablesInfo[i].sectionData);
         }
     }
 
     vc_vector_release(fileInfo->progBitsSections);
 
-    // printf("Freeing symtab data\n");
+    FAIRY_DEBUG_PRINTF("%s","Freeing symtab data\n");
     free(fileInfo->symtabInfo.sectionData);
 
-    // printf("Freeing strtab data\n");
+    FAIRY_DEBUG_PRINTF("%s", "Freeing strtab data\n");
     free(fileInfo->strtab);
 }

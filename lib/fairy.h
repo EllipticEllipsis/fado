@@ -9,6 +9,14 @@
 #define FAIRY_DEF_STRING(prefix, x) \
     { prefix##x, #x }
 
+typedef enum {
+    VERBOSITY_NONE,
+    VERBOSITY_INFO,
+    VERBOSITY_DEBUG //,
+} VerbosityLevel;
+
+extern VerbosityLevel gVerbosity;
+
 typedef Elf32_Ehdr FairyFileHeader;
 typedef Elf32_Shdr FairySecHeader;
 typedef Elf32_Sym FairySym;
@@ -38,6 +46,11 @@ typedef enum {
     FAIRY_SECTION_RODATA,
     FAIRY_SECTION_OTHER //,
 } FairySection;
+
+/* Prints debugging information to stderr. To be used via the macros. */
+int Fairy_DebugPrintf(const char* file, int line, const char* func, VerbosityLevel level, const char* fmt, ...);
+#define FAIRY_INFO_PRINTF(fmt, ...) Fairy_DebugPrintf(__FILE__, __LINE__, __func__, VERBOSITY_INFO, fmt, __VA_ARGS__)
+#define FAIRY_DEBUG_PRINTF(fmt, ...) Fairy_DebugPrintf(__FILE__, __LINE__, __func__, VERBOSITY_DEBUG, fmt, __VA_ARGS__)
 
 const char* Fairy_StringFromDefine(const FairyDefineString* dict, int define);
 bool Fairy_StartsWith(const char* string, const char* initial);
