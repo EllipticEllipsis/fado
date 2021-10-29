@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "fairy.h"
+#include "fairy/fairy.h"
 #include "macros.h"
 #include "vc_vector/vc_vector.h"
 

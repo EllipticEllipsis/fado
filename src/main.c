@@ -8,7 +8,7 @@
 
 #include "macros.h"
 #include "help.h"
-#include "fairy.h"
+#include "fairy/fairy.h"
 #include "fado.h"
 #include "vc_vector/vc_vector.h"
 
