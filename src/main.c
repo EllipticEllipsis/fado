@@ -178,13 +178,13 @@ int main(int argc, char** argv) {
 
         FAIRY_INFO_PRINTF("Found %d input file%s\n", inputFilesCount, (inputFilesCount == 1 ? "" : "s"));
 
-        if (ovlName == NULL) {
+        if (ovlName == NULL) { // If a name has not been set using an arg
             ovlName = GetOverlayNameFromFilename(argv[optind]);
+            Fado_Relocs(outputFile, inputFilesCount, inputFiles, ovlName);
+            free(ovlName);
+        } else {
+            Fado_Relocs(outputFile, inputFilesCount, inputFiles, ovlName);
         }
-
-        Fado_Relocs(outputFile, inputFilesCount, inputFiles, ovlName);
-
-        free(ovlName);
 
         for (i = 0; i < inputFilesCount; i++) {
             fclose(inputFiles[i]);
