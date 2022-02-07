@@ -49,8 +49,6 @@ typedef enum {
     FAIRY_SECTION_OTHER //,
 } FairySection;
 
-#define ALIGN(val, align) (((val) + (align-1)) / (align) * (align))
-
 /* Prints debugging information to stderr. To be used via the macros. */
 int Fairy_DebugPrintf(const char* file, int line, const char* func, VerbosityLevel level, const char* fmt, ...);
 #define FAIRY_INFO_PRINTF(fmt, ...) Fairy_DebugPrintf(__FILE__, __LINE__, __func__, VERBOSITY_INFO, fmt, __VA_ARGS__)
