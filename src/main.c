@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
                 break;
 
             case 'a':
-                gUseRealAlignment = true;
+                gUseElfAlignment = true;
                 break;
 
             case 'h':

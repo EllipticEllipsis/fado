@@ -27,7 +27,7 @@
 #include "macros.h"
 
 VerbosityLevel gVerbosity = VERBOSITY_NONE;
-bool gUseRealAlignment = false;
+bool gUseElfAlignment = false;
 
 int Fairy_DebugPrintf(const char* file, int line, const char* func,VerbosityLevel level, const char* fmt, ...) {
     if (gVerbosity >= level) {
@@ -259,7 +259,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                     /* Ignore the leading "." */
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
-                        if (gUseRealAlignment) {
+                        if (gUseElfAlignment) {
                             // Ensure the next file will start at its correct alignment
                             fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_TEXT], currentSection.sh_addralign);
                             fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += ALIGN(currentSection.sh_size, currentSection.sh_addralign);
@@ -269,7 +269,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                         FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
-                        if (gUseRealAlignment) {
+                        if (gUseElfAlignment) {
                             // Ensure the next file will start at its correct alignment
                             fileInfo->progBitsSizes[FAIRY_SECTION_DATA] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_DATA], currentSection.sh_addralign);
                             fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += ALIGN(currentSection.sh_size, currentSection.sh_addralign);
@@ -279,7 +279,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                         FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
                     } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
-                        if (gUseRealAlignment) {
+                        if (gUseElfAlignment) {
                             // Ensure the next file will start at its correct alignment
                             fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_RODATA], currentSection.sh_addralign);
                             fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += ALIGN(currentSection.sh_size, currentSection.sh_addralign);
