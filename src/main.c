@@ -55,7 +55,7 @@ char* GetOverlayNameFromFilename(const char* src) {
     return ret;
 }
 
-#define OPTSTR "M:n:o:v:hV"
+#define OPTSTR "M:n:o:v:ahV"
 #define USAGE_STRING "Usage: %s [-hV] [-n name] [-o output_file] [-v level] input_files ...\n"
 
 #define HELP_PROLOGUE                                            \
@@ -74,6 +74,8 @@ static const OptInfo optInfo[] = {
     { { "name", required_argument, NULL, 'n' }, "NAME", "Use NAME as the overlay name. Will use the deepest folder name in the input file's path if not specified" },
     { { "output-file", required_argument, NULL, 'o' }, "FILE", "Output to FILE. Will use stdout if none is specified" },
     { { "verbosity", required_argument, NULL, 'v' }, "N", "Verbosity level, one of 0 (None, default), 1 (Info), 2 (Debug)" },
+
+    { { "alignment", no_argument, NULL, 'a' }, NULL, "Use the alignment declared by each section in the elf file instead of padding to 0x10 bytes" },
 
     { { "help", no_argument, NULL, 'h' }, NULL, "Display this message and exit" },
     { { "version", no_argument, NULL, 'V' }, NULL, "Display version information" },
@@ -140,6 +142,10 @@ int main(int argc, char** argv) {
                 if (sscanf(optarg, "%u", &gVerbosity) == 0) {
                     fprintf(stderr, "warning: verbosity argument '%s' should be a nonnegative decimal integer", optarg);
                 }
+                break;
+
+            case 'a':
+                gUseRealAlignment = true;
                 break;
 
             case 'h':
