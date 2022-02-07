@@ -1,13 +1,11 @@
 /**
  * Functions for working with N64 ELF files.
- * For now relies on (GNU) elf.h, but may move away from this in future.
  */
 /* Copyright (C) 2021 Elliptic Ellipsis */
 /* SPDX-License-Identifier: AGPL-3.0-only */
 #include "fairy.h"
 
 #include <assert.h>
-#include <endian.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -15,7 +13,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Different platforms put their endian files in different places. */
+#if defined(__APPLE__)
+  #include <machine/endian.h>
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+  #include <sys/types.h>
+  #include <sys/endian.h>
+#else /* Linux */
+  #include <endian.h>
+#endif
+
 #include "vc_vector/vc_vector.h"
+#include "macros.h"
 
 VerbosityLevel gVerbosity = VERBOSITY_NONE;
 
@@ -246,14 +255,16 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
             switch (currentSection.sh_type) {
                 case SHT_PROGBITS:
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
+
+                    /* Ignore the leading "." */
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
-                        fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += currentSection.sh_size;
+                        fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
-                        fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += currentSection.sh_size;
+                        fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
                     } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
-                        fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += currentSection.sh_size;
+                        fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
                     }
                     break;
@@ -281,6 +292,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     {
                         FairySection relocSection = FAIRY_SECTION_OTHER;
 
+                        /* Ignore the first 5 chars, which will always be ".rel." */
                         if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
                             relocSection = FAIRY_SECTION_TEXT;
                             FAIRY_DEBUG_PRINTF("%s", "Found rel.text section\n");
@@ -313,7 +325,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
 void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
     size_t i;
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < ARRAY_COUNTU(fileInfo->relocTablesInfo); i++) {
         if (fileInfo->relocTablesInfo[i].sectionData != NULL) {
             FAIRY_DEBUG_PRINTF("Freeing reloc section %zd data\n", i);
             free(fileInfo->relocTablesInfo[i].sectionData);

@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <elf.h>
+#include "mips_elf.h"
 
 #include "vc_vector/vc_vector.h"
 
