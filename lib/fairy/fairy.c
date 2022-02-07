@@ -32,6 +32,7 @@
 #endif
 
 #include "vc_vector/vc_vector.h"
+#include "macros.h"
 
 VerbosityLevel gVerbosity = VERBOSITY_NONE;
 
@@ -263,10 +264,10 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                 case SHT_PROGBITS:
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
-                        fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += currentSection.sh_size;
+                        fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
-                        fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += currentSection.sh_size;
+                        fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
                     } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
                         fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += ALIGN(currentSection.sh_size, 0x10);
