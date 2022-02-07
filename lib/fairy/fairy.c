@@ -14,20 +14,12 @@
 #include <string.h>
 
 /* Different platforms put their endian files in different places. */
-#if defined(OS_MACOSX)
+#if defined(__APPLE__)
   #include <machine/endian.h>
-#elif defined(OS_SOLARIS)
-  #include <sys/isa_defs.h>
-  #ifdef _LITTLE_ENDIAN
-    #define LITTLE_ENDIAN
-  #else
-    #define BIG_ENDIAN
-  #endif
-#elif defined(OS_FREEBSD) || defined(OS_OPENBSD) || defined(OS_NETBSD) ||\
-      defined(OS_DRAGONFLYBSD)
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
   #include <sys/types.h>
   #include <sys/endian.h>
-#else
+#else /* Linux */
   #include <endian.h>
 #endif
 
@@ -263,6 +255,8 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
             switch (currentSection.sh_type) {
                 case SHT_PROGBITS:
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
+
+                    /* Ignore the leading "." */
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
@@ -298,6 +292,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     {
                         FairySection relocSection = FAIRY_SECTION_OTHER;
 
+                        /* Ignore the first 5 chars, which will always be ".rel." */
                         if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
                             relocSection = FAIRY_SECTION_TEXT;
                             FAIRY_DEBUG_PRINTF("%s", "Found rel.text section\n");
@@ -330,7 +325,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
 void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
     size_t i;
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < ARRAY_COUNTU(fileInfo->relocTablesInfo); i++) {
         if (fileInfo->relocTablesInfo[i].sectionData != NULL) {
             FAIRY_DEBUG_PRINTF("Freeing reloc section %zd data\n", i);
             free(fileInfo->relocTablesInfo[i].sectionData);
