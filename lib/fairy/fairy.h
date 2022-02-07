@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <elf.h>
+#include "mips_elf.h"
 
 #include "vc_vector/vc_vector.h"
 
@@ -48,6 +48,8 @@ typedef enum {
     FAIRY_SECTION_RODATA,
     FAIRY_SECTION_OTHER //,
 } FairySection;
+
+#define ALIGN(val, align) (((val) + (align-1)) / (align) * (align))
 
 /* Prints debugging information to stderr. To be used via the macros. */
 int Fairy_DebugPrintf(const char* file, int line, const char* func, VerbosityLevel level, const char* fmt, ...);

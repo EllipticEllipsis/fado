@@ -1,6 +1,5 @@
 /**
  * Functions for working with N64 ELF files.
- * For now relies on (GNU) elf.h, but may move away from this in future.
  */
 /* Copyright (C) 2021 Elliptic Ellipsis */
 /* SPDX-License-Identifier: AGPL-3.0-only */
@@ -253,7 +252,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += currentSection.sh_size;
                         FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
                     } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
-                        fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += currentSection.sh_size;
+                        fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += ALIGN(currentSection.sh_size, 0x10);
                         FAIRY_DEBUG_PRINTF("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
                     }
                     break;
