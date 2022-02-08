@@ -260,7 +260,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     /* Ignore the leading "." */
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
                         if (gUseElfAlignment) {
-                            // Ensure the next file will start at its correct alignment
+                            /* Ensure the next file will start at its correct alignment */
                             fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_TEXT], currentSection.sh_addralign);
                             fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += ALIGN(currentSection.sh_size, currentSection.sh_addralign);
                         } else {
