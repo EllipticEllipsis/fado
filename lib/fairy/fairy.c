@@ -280,7 +280,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
                     } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
                         if (gUseElfAlignment) {
-                            // Ensure the next file will start at its correct alignment
+                            /* Ensure the next file will start at its correct alignment */
                             fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_RODATA], currentSection.sh_addralign);
                             fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += ALIGN(currentSection.sh_size, currentSection.sh_addralign);
                         } else {
