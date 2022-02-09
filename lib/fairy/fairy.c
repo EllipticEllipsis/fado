@@ -13,16 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Different platforms put their endian files in different places. */
-#if defined(__APPLE__)
-#include <machine/endian.h>
-#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-#include <sys/types.h>
-#include <sys/endian.h>
-#else /* Linux */
-#include <endian.h>
-#endif
-
 #include "vc_vector/vc_vector.h"
 #include "macros.h"
 
@@ -67,8 +57,8 @@ static uint32_t Fairy_Swap32(uint32_t x) {
     return ((x & 0xFF) << 0x18) | ((x & 0xFF00) << 0x8) | ((x & 0xFF0000) >> 0x8) | ((x & 0xFF000000) >> 0x18);
 }
 
-/* "Re-encode/Re-endianise", i.e. byteswap if required */
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+/* Both GCC and Clang define these, so we can avoid an endian header altogether */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define REEND16(x) Fairy_Swap16(x)
 #define REEND32(x) Fairy_Swap32(x)
 #else
