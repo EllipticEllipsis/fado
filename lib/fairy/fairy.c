@@ -270,7 +270,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
                     } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
                         if (gUseElfAlignment) {
-                            // Ensure the next file will start at its correct alignment
+                            /* Ensure the next file will start at its correct alignment */
                             fileInfo->progBitsSizes[FAIRY_SECTION_DATA] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_DATA], currentSection.sh_addralign);
                             fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += ALIGN(currentSection.sh_size, currentSection.sh_addralign);
                         } else {
