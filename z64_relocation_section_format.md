@@ -89,13 +89,13 @@ To prevent these you must pass *both* of the following compiler flags:
 
 ### rodata
 
-It should be clear from the description above that this system expects a single rodata section. Again, IDO will only ever produce one rodata section, but GCC will produce several, albeit only one containing relocatable rodata: the others are for "mergeable" strings and floats/doubles. The cleanest way to achieve this is to pass 
+It should be clear from the description above that this system expects a single rodata section. Again, IDO will only ever produce one rodata section, but GCC will produce several, albeit only one containing relocatable rodata: the others are for "mergeable" strings and floats/doubles. The cleanest way to deal with this is to pass 
 
 ```
 -fno-merge-constants
 ```
 
-If, however, you really think you will benefit from merging constants, to obtain relocations correctly offset from the start of the combined rodata section, it must be explicitly linked first.
+which will force GCC to generate a single combined rodata section. If, however, you really think you will benefit from merging constants, to obtain relocations correctly offset from the start of the entire rodata section(s), the actual `.rodata` section must be explicitly linked first.
 
 For multi-file overlays, the situation is even more complicated, and Fado gets around this by adding up the sizes of all the rodata sections so that we may simply place one files' in one chunk: this means that each individual `.rodata` section should be linked before the others, i.e.
 
