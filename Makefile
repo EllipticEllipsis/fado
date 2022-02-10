@@ -32,7 +32,7 @@ endif
 endif
 
 ifneq ($(EXPERIMENTAL),0)
-  CFLAGS    += -DEXPERIMENTAL=1
+  CFLAGS    += -DEXPERIMENTAL
 endif
 
 # GCC is too stupid to be trusted with these warnings
