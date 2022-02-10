@@ -1,6 +1,7 @@
 DEBUG       ?= 0
 LLD         ?= 0
 ASAN        ?= 0
+EXPERIMENTAL?= 0
 
 ELF         := fado.elf
 
@@ -28,6 +29,10 @@ else
 ifneq ($(LD),ld)
   LDFLAGS   += -fuse-ld=lld
 endif
+endif
+
+ifneq ($(EXPERIMENTAL),0)
+  CFLAGS    += -DEXPERIMENTAL=1
 endif
 
 # GCC is too stupid to be trusted with these warnings
