@@ -108,17 +108,27 @@ FairyFileHeader* Fairy_ReadFileHeader(FairyFileHeader* header, FILE* file) {
     assert(fread(header, 0x34, 1, file) != 0);
 
     if (!Fairy_VerifyMagic(header->e_ident)) {
-        fprintf(stderr, "Not a valid ELF file\n");
+        fprintf(stderr, "Not a valid ELF file.\n");
         return NULL;
     }
 
     if (header->e_ident[EI_CLASS] != ELFCLASS32) {
-        fprintf(stderr, "Not a 32-bit ELF file\n");
+        fprintf(stderr, "Not a 32-bit ELF file.\n");
         return NULL;
     }
 
     header->e_type = REEND16(header->e_type);
+    if (header->e_type != ET_REL) {
+        fprintf(stderr, "Not a relocatable object file.\n");
+        return NULL;
+    }
+
     header->e_machine = REEND16(header->e_machine);
+    if (header->e_machine != EM_MIPS) {
+        fprintf(stderr, "Not a MIPS object file.\n");
+        return NULL;
+    }
+
     header->e_version = REEND32(header->e_version);
     header->e_entry = REEND32(header->e_entry);
     header->e_phoff = REEND32(header->e_phoff);
