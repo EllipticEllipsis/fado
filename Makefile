@@ -57,7 +57,7 @@ clean:
 	$(RM) -r build $(ELF)
 
 format:
-	clang-format-11 -i $(C_FILES) $(H_FILES)
+	clang-format-11 -i $(C_FILES) $(H_FILES) lib/fairy/*
 
 .PHONY: all clean format
 

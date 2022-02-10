@@ -15,12 +15,12 @@
 
 /* Different platforms put their endian files in different places. */
 #if defined(__APPLE__)
-  #include <machine/endian.h>
+#include <machine/endian.h>
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-  #include <sys/types.h>
-  #include <sys/endian.h>
+#include <sys/types.h>
+#include <sys/endian.h>
 #else /* Linux */
-  #include <endian.h>
+#include <endian.h>
 #endif
 
 #include "vc_vector/vc_vector.h"
@@ -29,7 +29,7 @@
 VerbosityLevel gVerbosity = VERBOSITY_NONE;
 bool gUseElfAlignment = false;
 
-int Fairy_DebugPrintf(const char* file, int line, const char* func,VerbosityLevel level, const char* fmt, ...) {
+int Fairy_DebugPrintf(const char* file, int line, const char* func, VerbosityLevel level, const char* fmt, ...) {
     if (gVerbosity >= level) {
         int ret = 0;
         va_list args;
@@ -274,12 +274,15 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         if (sectionType != -1) {
                             if (gUseElfAlignment) {
                                 /* Ensure the next file will start at its correct alignment */
-                                fileInfo->progBitsSizes[sectionType] = ALIGN(fileInfo->progBitsSizes[sectionType], currentSection.sh_addralign);
+                                fileInfo->progBitsSizes[sectionType] =
+                                    ALIGN(fileInfo->progBitsSizes[sectionType], currentSection.sh_addralign);
 
                                 alignedSize = ALIGN(currentSection.sh_size, currentSection.sh_addralign);
 
-                                FAIRY_DEBUG_PRINTF("%s section alignment: 0x%X\n", sectionName, currentSection.sh_addralign);
-                                FAIRY_DEBUG_PRINTF("%s section size before align: 0x%X\n", sectionName, currentSection.sh_size);
+                                FAIRY_DEBUG_PRINTF("%s section alignment: 0x%X\n", sectionName,
+                                                   currentSection.sh_addralign);
+                                FAIRY_DEBUG_PRINTF("%s section size before align: 0x%X\n", sectionName,
+                                                   currentSection.sh_size);
                                 FAIRY_DEBUG_PRINTF("%s section size after align: 0x%X\n", sectionName, alignedSize);
 
                                 fileInfo->progBitsSizes[sectionType] += alignedSize;
@@ -287,7 +290,8 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                                 fileInfo->progBitsSizes[sectionType] += ALIGN(currentSection.sh_size, 0x10);
                             }
 
-                            FAIRY_DEBUG_PRINTF("%s section size: 0x%X\n", sectionName, fileInfo->progBitsSizes[sectionType]);
+                            FAIRY_DEBUG_PRINTF("%s section size: 0x%X\n", sectionName,
+                                               fileInfo->progBitsSizes[sectionType]);
                         }
                     }
 
@@ -358,7 +362,7 @@ void Fairy_DestroyFile(FairyFileInfo* fileInfo) {
 
     vc_vector_release(fileInfo->progBitsSections);
 
-    FAIRY_DEBUG_PRINTF("%s","Freeing symtab data\n");
+    FAIRY_DEBUG_PRINTF("%s", "Freeing symtab data\n");
     free(fileInfo->symtabInfo.sectionData);
 
     FAIRY_DEBUG_PRINTF("%s", "Freeing strtab data\n");
