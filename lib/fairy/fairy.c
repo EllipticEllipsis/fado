@@ -257,65 +257,40 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                 case SHT_PROGBITS:
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
 
-                    /* Ignore the leading "." */
-                    if (strcmp(&shstrtab[currentSection.sh_name + 1], "text") == 0) {
-                        if (gUseElfAlignment) {
-                            size_t alignedSize;
+                    {
+                        int sectionType = -1;
+                        const char* sectionName = &shstrtab[currentSection.sh_name + 1];
+                        size_t alignedSize;
 
-                            /* Ensure the next file will start at its correct alignment */
-                            fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_TEXT], currentSection.sh_addralign);
-
-                            alignedSize = ALIGN(currentSection.sh_size, currentSection.sh_addralign);
-
-                            FAIRY_DEBUG_PRINTF("%s section alignment: 0x%X\n", &shstrtab[currentSection.sh_name + 1], currentSection.sh_addralign);
-                            FAIRY_DEBUG_PRINTF("%s section size before align: 0x%X\n", &shstrtab[currentSection.sh_name + 1], currentSection.sh_size);
-                            FAIRY_DEBUG_PRINTF("%s section size after align: 0x%X\n", &shstrtab[currentSection.sh_name + 1], alignedSize);
-
-                            fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += alignedSize;
-                        } else {
-                            fileInfo->progBitsSizes[FAIRY_SECTION_TEXT] += ALIGN(currentSection.sh_size, 0x10);
+                        /* Ignore the leading "." */
+                        if (strcmp(sectionName, "text") == 0) {
+                            sectionType = FAIRY_SECTION_TEXT;
+                        } else if (strcmp(sectionName, "data") == 0) {
+                            sectionType = FAIRY_SECTION_DATA;
+                        } else if (Fairy_StartsWith(sectionName, "rodata")) { /* May be several */
+                            sectionType = FAIRY_SECTION_RODATA;
                         }
 
-                        FAIRY_DEBUG_PRINTF("text section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_TEXT]);
-                    } else if (strcmp(&shstrtab[currentSection.sh_name + 1], "data") == 0) {
-                        if (gUseElfAlignment) {
-                            size_t alignedSize;
+                        if (sectionType != -1) {
+                            if (gUseElfAlignment) {
+                                /* Ensure the next file will start at its correct alignment */
+                                fileInfo->progBitsSizes[sectionType] = ALIGN(fileInfo->progBitsSizes[sectionType], currentSection.sh_addralign);
 
-                            /* Ensure the next file will start at its correct alignment */
-                            fileInfo->progBitsSizes[FAIRY_SECTION_DATA] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_DATA], currentSection.sh_addralign);
+                                alignedSize = ALIGN(currentSection.sh_size, currentSection.sh_addralign);
 
-                            alignedSize = ALIGN(currentSection.sh_size, currentSection.sh_addralign);
+                                FAIRY_DEBUG_PRINTF("%s section alignment: 0x%X\n", sectionName, currentSection.sh_addralign);
+                                FAIRY_DEBUG_PRINTF("%s section size before align: 0x%X\n", sectionName, currentSection.sh_size);
+                                FAIRY_DEBUG_PRINTF("%s section size after align: 0x%X\n", sectionName, alignedSize);
 
-                            FAIRY_DEBUG_PRINTF("%s section alignment: 0x%X\n", &shstrtab[currentSection.sh_name + 1], currentSection.sh_addralign);
-                            FAIRY_DEBUG_PRINTF("%s section size before align: 0x%X\n", &shstrtab[currentSection.sh_name + 1], currentSection.sh_size);
-                            FAIRY_DEBUG_PRINTF("%s section size after align: 0x%X\n", &shstrtab[currentSection.sh_name + 1], alignedSize);
+                                fileInfo->progBitsSizes[sectionType] += alignedSize;
+                            } else {
+                                fileInfo->progBitsSizes[sectionType] += ALIGN(currentSection.sh_size, 0x10);
+                            }
 
-                            fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += alignedSize;
-                        } else {
-                            fileInfo->progBitsSizes[FAIRY_SECTION_DATA] += ALIGN(currentSection.sh_size, 0x10);
+                            FAIRY_DEBUG_PRINTF("%s section size: 0x%X\n", sectionName, fileInfo->progBitsSizes[sectionType]);
                         }
-
-                        FAIRY_DEBUG_PRINTF("data section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_DATA]);
-                    } else if (Fairy_StartsWith(&shstrtab[currentSection.sh_name + 1], "rodata")) { /* May be several */
-                        if (gUseElfAlignment) {
-                            size_t alignedSize;
-
-                            /* Ensure the next file will start at its correct alignment */
-                            fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] = ALIGN(fileInfo->progBitsSizes[FAIRY_SECTION_RODATA], currentSection.sh_addralign);
-
-                            alignedSize = ALIGN(currentSection.sh_size, currentSection.sh_addralign);
-
-                            FAIRY_DEBUG_PRINTF("%s section alignment: 0x%X\n", &shstrtab[currentSection.sh_name + 1], currentSection.sh_addralign);
-                            FAIRY_DEBUG_PRINTF("%s section size before align: 0x%X\n", &shstrtab[currentSection.sh_name + 1], currentSection.sh_size);
-                            FAIRY_DEBUG_PRINTF("%s section size after align: 0x%X\n", &shstrtab[currentSection.sh_name + 1], alignedSize);
-
-                            fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += alignedSize;
-                        } else {
-                            fileInfo->progBitsSizes[FAIRY_SECTION_RODATA] += ALIGN(currentSection.sh_size, 0x10);
-                        }
-
-                        FAIRY_DEBUG_PRINTF("rodata section size: 0x%X\n", fileInfo->progBitsSizes[FAIRY_SECTION_RODATA]);
                     }
+
                     break;
 
                 case SHT_SYMTAB:
