@@ -30,7 +30,7 @@ A standalone invocation of Fado would look something like
 ```sh
 ./fado.elf z_en_hs2.o -n ovl_En_Hs2 -o ovl_En_Hs2_reloc.s
 ```
-This takes as input the compiled object file from the C file (currently located [here](https://github.com/zeldaret/oot/blob/master/src/overlays/actors/ovl_En_Hs2/z_en_hs2.c)), the name of the overlay (`ovl_En_Hs2`) and will output an assembly file `ovl_En_Hs2_reloc.s` containing the relocation section. An example output is included in the repo [here](ovl_En_Hs_reloc.s). Fado will print information from the object file to assist with debugging, by splitting relocs by section, and for each, printing the type, offset, and associated symbol (or section if static):
+This takes as input the compiled object file from the C file (e.g. [this one](https://github.com/zeldaret/oot/blob/eadc477187888e1ae078d021b4a00b1366f0c9a4/src/overlays/actors/ovl_En_Hs2/z_en_hs2.c)), the name of the overlay (`ovl_En_Hs2`) and will output an assembly file `ovl_En_Hs2_reloc.s` containing the relocation section. An example output is included in the repo [here](ovl_En_Hs_reloc.s). Fado will print information from the object file to assist with debugging, by splitting relocs by section, and for each, printing the type, offset, and associated symbol (or section if static):
 
 ```mips
 # TEXT RELOCS
