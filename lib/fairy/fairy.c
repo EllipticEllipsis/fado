@@ -258,7 +258,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     assert(vc_vector_push_back(fileInfo->progBitsSections, &currentIndex));
 
                     {
-                        int sectionType = -1;
+                        FairySection sectionType = FAIRY_SECTION_OTHER;
                         const char* sectionName = &shstrtab[currentSection.sh_name + 1];
                         size_t alignedSize;
 
