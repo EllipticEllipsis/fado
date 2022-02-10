@@ -271,7 +271,7 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                             sectionType = FAIRY_SECTION_RODATA;
                         }
 
-                        if (sectionType != -1) {
+                        if (sectionType != FAIRY_SECTION_OTHER) {
                             if (gUseElfAlignment) {
                                 /* Ensure the next file will start at its correct alignment */
                                 fileInfo->progBitsSizes[sectionType] =
