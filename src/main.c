@@ -75,7 +75,7 @@ static const OptInfo optInfo[] = {
     { { "output-file", required_argument, NULL, 'o' }, "FILE", "Output to FILE. Will use stdout if none is specified" },
     { { "verbosity", required_argument, NULL, 'v' }, "N", "Verbosity level, one of 0 (None, default), 1 (Info), 2 (Debug)" },
 
-    { { "alignment", no_argument, NULL, 'a' }, NULL, "Use the alignment declared by each section in the elf file instead of padding to 0x10 bytes" },
+    { { "alignment", no_argument, NULL, 'a' }, NULL, "Use the alignment declared by each section in the elf file instead of padding to 0x10 bytes. NOTE: It has not been properly tested because the tools we currently have are not compatible non 0x10 alignment" },
 
     { { "help", no_argument, NULL, 'h' }, NULL, "Display this message and exit" },
     { { "version", no_argument, NULL, 'V' }, NULL, "Display version information" },
