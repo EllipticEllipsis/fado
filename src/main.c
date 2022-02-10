@@ -238,6 +238,9 @@ int main(int argc, char** argv) {
 
     goto not_experimental_err; // silences a warning
 not_experimental_err:
-    fprintf(stderr, "Experimental option '-%c' passed in a non-EXPERIMENTAL build. Rebuild with 'make EXPERIMENTAL=1' to enable.\n", opt);
+    fprintf(
+        stderr,
+        "Experimental option '-%c' passed in a non-EXPERIMENTAL build. Rebuild with 'make EXPERIMENTAL=1' to enable.\n",
+        opt);
     return EXIT_FAILURE;
 }

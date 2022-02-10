@@ -8,7 +8,7 @@
 #define ARRAY_COUNT(arr) (signed long long)(sizeof(arr) / sizeof(arr[0]))
 #define ARRAY_COUNTU(arr) (unsigned long long)(sizeof(arr) / sizeof(arr[0]))
 
-#define ALIGN(val, align) (((val) + (align-1)) / (align) * (align))
+#define ALIGN(val, align) (((val) + (align - 1)) / (align) * (align))
 
 /* Mathematical macros */
 #define ABS(x) ((x) < 0 ? -(x) : (x))
