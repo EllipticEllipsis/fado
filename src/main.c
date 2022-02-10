@@ -84,7 +84,7 @@ static const OptInfo optInfo[] = {
 };
 // clang-format on
 
-static size_t posArgCount = ARRAY_COUNT(optInfo);
+static size_t posArgCount = ARRAY_COUNT(posArgInfo);
 static size_t optCount = ARRAY_COUNT(optInfo);
 static struct option longOptions[ARRAY_COUNT(optInfo)];
 
