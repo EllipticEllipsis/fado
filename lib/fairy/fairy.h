@@ -18,6 +18,7 @@ typedef enum {
 } VerbosityLevel;
 
 extern VerbosityLevel gVerbosity;
+extern bool gUseElfAlignment;
 
 typedef Elf32_Ehdr FairyFileHeader;
 typedef Elf32_Shdr FairySecHeader;
