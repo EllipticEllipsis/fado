@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
             case 'a':
 #ifndef EXPERIMENTAL
                 fprintf(stderr, "Experimental option '-a' passed in a non-EXPERIMENTAL build. Rebuild with 'make EXPERIMENTAL=1' to enable.\n");
-                return 1;
+                return EXIT_FAILURE;
 #endif
                 gUseElfAlignment = true;
                 break;
