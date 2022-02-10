@@ -70,7 +70,7 @@ _ovl_En_Hs2SegmentTextSize
 etc.
 
 - By default Fado expects sections to be 0x10-aligned, as is usual for IDO. Some versions of GCC like to align sections to smaller widths, which Fado will handle appropriately, but the linker script must also address this, and at least the default settings seem unable to size the sections correctly due ot placing `fill`s in the wrong places. For now it is recommended to manually align sections to 0x10 if the compiler does not automatically.
-  - The experimental flag `--alignment`/`-a` can be passed to Fado, and it will use the alignment declared by each section in the elf file instead of padding them to 0x10 bytes, It should be noted this option has not been fully tested because currently we don't have any linker script tool that can properly address the incorrect placing of `fill`s.
+  - The experimental flag `--alignment`/`-a` can be passed to Fado, and it will use the alignment declared by each section in the elf file instead of padding them to 0x10 bytes, It should be noted this option has not been fully tested because currently we don't have any linker script tool that can properly address the incorrect placing of `fill`s. Fado must be rebuilt passing `EXPERIMENTAL=1` to be able to use this flag.
 
 - To prevent GCC producing non-compliant HI/LOs, you must pass *both* of the following compiler flags: `-mno-explicit-relocs -mno-split-addresses`. See [here](z64_relocation_section_format.md#hilo) for more details.
 
