@@ -40,8 +40,7 @@ void Fado_ConstructStringVectors(vc_vector** stringVectors, FairyFileInfo* fileI
         stringVectors[currentFile] = vc_vector_create(0x40, sizeof(char**), NULL);
 
         /* Build a vector of pointers to defined symbols' names */
-        for (currentSym = 0; currentSym < fileInfo[currentFile].symtabInfo.sectionSize / sizeof(FairySym);
-             currentSym++) {
+        for (currentSym = 0; currentSym < fileInfo[currentFile].symtabInfo.sectionNumEntries; currentSym++) {
             if ((symtab[currentSym].st_shndx != STN_UNDEF) &&
                 Fado_CheckInProgBitsSections(symtab[currentSym].st_shndx, fileInfo[currentFile].progBitsSections)) {
                 /* Have to pass a double pointer so it copies the pointer instead of the start of the string */
@@ -224,10 +223,9 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
 
         for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
             FairyRela* relSection = fileInfos[currentFile].relocTablesInfo[section].sectionData;
-            if (relSection != NULL) {
 
-                for (relocIndex = 0;
-                     relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRela);
+            if (relSection != NULL) {
+                for (relocIndex = 0; relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionNumEntries;
                      relocIndex++) {
                     FadoRelocInfo currentReloc = Fado_MakeReloc(currentFile, section, &relSection[relocIndex]);
 
