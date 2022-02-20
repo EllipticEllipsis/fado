@@ -192,7 +192,7 @@ char* Fairy_ReadStringTable(char* stringTable, FILE* file, size_t tableOffset, s
     return stringTable;
 }
 
-/* offset and number are attained from the section table */
+/* offset and number are attained from the section table, the returned pointer must be freed */
 FairyRela* Fairy_ReadRelocs(FILE* file, int type, size_t offset, size_t size) {
     size_t finalSize = (type == SHT_RELA) ? ((size * sizeof(FairyRela)) / sizeof(FairyRel)) : size;
     void* readBuf = malloc(size);
