@@ -193,18 +193,37 @@ char* Fairy_ReadStringTable(char* stringTable, FILE* file, size_t tableOffset, s
 }
 
 /* offset and number are attained from the section table */
-FairyRel* Fairy_ReadRelocs(FairyRel* relocTable, FILE* file, size_t offset, size_t size) {
+FairyRela* Fairy_ReadRelocs(FILE* file, int type, size_t offset, size_t size) {
+    size_t finalSize = (type == SHT_RELA) ? ((size * sizeof(FairyRela)) / sizeof(FairyRel)) : size;
+    void* readBuf = malloc(size);
+    FairyRela* relocTable = malloc(finalSize);
+
     fseek(file, offset, SEEK_SET);
-    assert(fread(relocTable, size, 1, file) != 0);
+    assert(fread(readBuf, size, 1, file) != 0);
 
     /* Reend the variables that are larger than bytes */
     {
         size_t i;
-        uint32_t* data = (uint32_t*)relocTable;
+        uint32_t* data = (uint32_t*)readBuf;
         for (i = 0; i < size / sizeof(uint32_t); i++) {
             data[i] = REEND32(data[i]);
         }
     }
+
+    /* Make the relocation table, for SHT_REL sections add an addend of 0 */
+    if (type == SHT_REL) {
+        size_t i;
+        FairyRel* rel = (FairyRel*)readBuf;
+
+        for (i = 0; i < size / sizeof(FairyRel); i++) {
+            relocTable[i].r_info = rel->r_info;
+            relocTable[i].r_offset = rel->r_offset;
+            relocTable[i].r_addend = 0;
+        }
+    } else {
+        memcpy(relocTable, readBuf, size);
+    }
+    free(readBuf);
 
     return relocTable;
 }
@@ -251,6 +270,8 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
         }
 
         for (currentIndex = 0; currentIndex < fileHeader.e_shnum; currentIndex++) {
+            size_t off = 0;
+
             currentSection = sectionTable[currentIndex];
 
             switch (currentSection.sh_type) {
@@ -314,30 +335,30 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                     }
                     break;
 
+                case SHT_RELA:
+                    off += 1;
                 case SHT_REL:
+                    off += 5;
                     /* This assumes only one reloc section of each name */
                     // TODO: is this a problem?
                     {
                         FairySection relocSection = FAIRY_SECTION_OTHER;
 
-                        /* Ignore the first 5 chars, which will always be ".rel." */
-                        if (strcmp(&shstrtab[currentSection.sh_name + 5], "text") == 0) {
+                        /* Ignore the first 5/6 chars, which will always be ".rel."/".rela." */
+                        if (strcmp(&shstrtab[currentSection.sh_name + off], "text") == 0) {
                             relocSection = FAIRY_SECTION_TEXT;
-                            FAIRY_DEBUG_PRINTF("%s", "Found rel.text section\n");
-                        } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "data") == 0) {
+                        } else if (strcmp(&shstrtab[currentSection.sh_name + off], "data") == 0) {
                             relocSection = FAIRY_SECTION_DATA;
-                            FAIRY_DEBUG_PRINTF("%s", "Found rel.data section\n");
-                        } else if (strcmp(&shstrtab[currentSection.sh_name + 5], "rodata") == 0) {
+                        } else if (strcmp(&shstrtab[currentSection.sh_name + off], "rodata") == 0) {
                             relocSection = FAIRY_SECTION_RODATA;
-                            FAIRY_DEBUG_PRINTF("%s", "Found rel.rodata section\n");
                         } else {
                             break;
                         }
+                        FAIRY_DEBUG_PRINTF("Found %s section\n", &shstrtab[currentSection.sh_name]);
 
                         fileInfo->relocTablesInfo[relocSection].sectionSize = currentSection.sh_size;
-                        fileInfo->relocTablesInfo[relocSection].sectionData = malloc(currentSection.sh_size);
-                        Fairy_ReadRelocs(fileInfo->relocTablesInfo[relocSection].sectionData, file,
-                                         currentSection.sh_offset, currentSection.sh_size);
+                        fileInfo->relocTablesInfo[relocSection].sectionData = Fairy_ReadRelocs(
+                            file, currentSection.sh_type, currentSection.sh_offset, currentSection.sh_size);
                     }
                     break;
 

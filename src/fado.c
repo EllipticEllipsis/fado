@@ -86,7 +86,7 @@ typedef struct {
 } FadoRelocInfo;
 
 /* Construct the Zelda64ovl-compatible reloc word from an ELF reloc */
-FadoRelocInfo Fado_MakeReloc(int file, FairySection section, FairyRel* data) {
+FadoRelocInfo Fado_MakeReloc(int file, FairySection section, FairyRela* data) {
     FadoRelocInfo relocInfo = { 0 };
     uint32_t sectionPrefix = 0;
 
@@ -223,11 +223,11 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
         relocList[section] = vc_vector_create(0x100, sizeof(FadoRelocInfo), NULL);
 
         for (currentFile = 0; currentFile < inputFilesCount; currentFile++) {
-            FairyRel* relSection = fileInfos[currentFile].relocTablesInfo[section].sectionData;
+            FairyRela* relSection = fileInfos[currentFile].relocTablesInfo[section].sectionData;
             if (relSection != NULL) {
 
                 for (relocIndex = 0;
-                     relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRel);
+                     relocIndex < fileInfos[currentFile].relocTablesInfo[section].sectionSize / sizeof(FairyRela);
                      relocIndex++) {
                     FadoRelocInfo currentReloc = Fado_MakeReloc(currentFile, section, &relSection[relocIndex]);
 
