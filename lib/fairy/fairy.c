@@ -179,7 +179,7 @@ size_t Fairy_ReadSymbolTable(FairySym** symbolTableOut, FILE* file, size_t table
         return 0;
     }
 
-    /* Reend the variables that are larger than bytes */
+    /* Reend the variables that are wider than bytes */
     {
         size_t i;
         for (i = 0; i < number; i++) {
@@ -223,7 +223,7 @@ size_t Fairy_ReadRelocs(FairyRela** relocsOut, FILE* file, int type, size_t offs
         return 0;
     }
 
-    /* Reend the variables that are larger than bytes */
+    /* Reend the variables that are wider than bytes */
     {
         size_t i;
         uint32_t* data = (uint32_t*)readBuf;
@@ -344,7 +344,9 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
 
                 case SHT_SYMTAB:
                     if (strcmp(&shstrtab[currentSection.sh_name + 1], "symtab") == 0) {
-                        fileInfo->symtabInfo.sectionNumEntries =
+                        fileInfo->symtabInfo.sectionType = SHT_SYMTAB;
+                        fileInfo->symtabInfo.sectionEntrySize = sizeof(FairySym);
+                        fileInfo->symtabInfo.sectionEntryCount =
                             Fairy_ReadSymbolTable((FairySym**)&fileInfo->symtabInfo.sectionData, file,
                                                   currentSection.sh_offset, currentSection.sh_size);
                     }
@@ -379,7 +381,9 @@ void Fairy_InitFile(FairyFileInfo* fileInfo, FILE* file) {
                         }
                         FAIRY_DEBUG_PRINTF("Found %s section\n", &shstrtab[currentSection.sh_name]);
 
-                        fileInfo->relocTablesInfo[relocSection].sectionNumEntries =
+                        fileInfo->relocTablesInfo[relocSection].sectionType = SHT_RELA;
+                        fileInfo->relocTablesInfo[relocSection].sectionEntrySize = sizeof(FairyRela);
+                        fileInfo->relocTablesInfo[relocSection].sectionEntryCount =
                             Fairy_ReadRelocs((FairyRela**)&fileInfo->relocTablesInfo[relocSection].sectionData, file,
                                              currentSection.sh_type, currentSection.sh_offset, currentSection.sh_size);
                     }

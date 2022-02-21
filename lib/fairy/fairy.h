@@ -33,7 +33,9 @@ typedef struct {
 
 typedef struct {
     void* sectionData;
-    size_t sectionNumEntries;
+    int sectionType;
+    size_t sectionEntryCount;
+    size_t sectionEntrySize;
 } FairySectionInfo;
 
 typedef struct {
