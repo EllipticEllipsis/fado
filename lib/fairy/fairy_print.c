@@ -376,7 +376,7 @@ void Fairy_PrintSectionSizes(FairySecHeader* sectionTable, FILE* inputFile, size
     printf(".word 0x%08X # .bss size\n\n", bssSize);
 
     if (!symtabFound) {
-        fprintf(stderr, "Symbol table not found");
+        fprintf(stderr, "Symbol table not found\n");
         return;
     }
     /* Obtain the symbol table */
@@ -384,7 +384,7 @@ void Fairy_PrintSectionSizes(FairySecHeader* sectionTable, FILE* inputFile, size
     Fairy_ReadSymbolTable(&symtab, inputFile, symtabHeader.sh_offset, symtabHeader.sh_size);
 
     if (!strtabFound) {
-        fprintf(stderr, "String table not found");
+        fprintf(stderr, "String table not found\n");
     } else {
         /* Obtain the string table */
         strtab = malloc(strtabHeader.sh_size);
