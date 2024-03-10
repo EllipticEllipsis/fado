@@ -240,7 +240,7 @@ void Fado_Relocs(FILE* outputFile, int inputFilesCount, FILE** inputFiles, const
 
     {
         /* Write header */
-        fprintf(outputFile, ".section .ovl\n");
+        fprintf(outputFile, ".section .ovl, \"a\"\n");
         fprintf(outputFile, "# %sOverlayInfo\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentTextSize\n", ovlName);
         fprintf(outputFile, ".word _%sSegmentDataSize\n", ovlName);
